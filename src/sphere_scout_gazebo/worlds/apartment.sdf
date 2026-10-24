@@ -225,18 +225,19 @@
         </gz-gui>
       </plugin>
 
-      <!-- Live view of the robot's 32 x 24 thermal camera (Gazebo topic, scaled to its own
-           min..max each frame, so the warmest thing in view shows white) -->
+      <!-- Live colour view of the robot's 32 x 24 thermal camera on a fixed 5..40 C scale,
+           made by thermal_celsius_node (perception.launch.py) and bridged back into Gazebo.
+           Empty until that node runs. -->
       <plugin filename="ImageDisplay" name="Thermal camera">
         <gz-gui>
-          <title>Thermal camera</title>
+          <title>Thermal camera, 5-40 C</title>
           <property key="state" type="string">floating</property>
           <property type="double" key="x">10</property>
           <property type="double" key="y">60</property>
           <property type="double" key="width">380</property>
-          <property type="double" key="height">320</property>
+          <property type="double" key="height">350</property>
         </gz-gui>
-        <topic>/thermal/image_raw</topic>
+        <topic>/thermal/image_color</topic>
         <topic_picker>false</topic_picker>
       </plugin>
     </gui>
@@ -253,9 +254,10 @@
     </plugin>
     <plugin filename="gz-sim-imu-system" name="gz::sim::systems::Imu"/>
 
-    <!-- ambient 20 C for the thermal camera -->
+    <!-- night: air 15 C. The thermal camera reads anything without its own temperature
+         (the sky, the robot) as air. Building temperatures are in models/apartment. -->
     <atmosphere type="adiabatic">
-      <temperature>293.15</temperature>
+      <temperature>288.15</temperature>
     </atmosphere>
 
     <scene>
@@ -284,6 +286,10 @@
             <ambient>0.45 0.43 0.4 1</ambient>
             <diffuse>0.45 0.43 0.4 1</diffuse>
           </material>
+          <!-- night ground, cooler than the air -->
+          <plugin filename="gz-sim-thermal-system" name="gz::sim::systems::Thermal">
+            <temperature>285.15</temperature>
+          </plugin>
         </visual>
       </link>
     </model>

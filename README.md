@@ -34,11 +34,13 @@ The firmware (`firmware/sphere_scout_firmware`, `COLCON_IGNORE`d) is built separ
 
 ```bash
 # 1. Simulation: Gazebo, robot, bridge, EKF (headless:=true for no GUI; rviz:=true once
-#    mission_control.rviz is saved). The robot is the placeholder cube until sphere.urdf.xacro
-#    is ready; switch with model:=sphere.urdf.xacro.
+#    mission_control.rviz is saved). The robot is the team's 9 cm sphere (sphere.urdf.xacro);
+#    model:=placeholder_cube.urdf.xacro gives the earlier stand-in, and world:=climb_test.sdf
+#    a course of ramps and steps.
 ros2 launch sphere_scout_bringup gazebo_world.launch.py
 
-# 2. Perception (for now: the thermal camera in degC on /thermal/celsius)
+# 2. Perception (for now: the thermal camera in degC on /thermal/celsius, and the colour
+#    5-40 degC view that the Gazebo "Thermal camera" panel shows)
 ros2 launch sphere_scout_ai perception.launch.py
 #    Print one 32 x 24 frame as a grid of degC
 ros2 run sphere_scout_ai print_thermal
@@ -64,10 +66,11 @@ ros2 service call /mission/scan std_srvs/srv/Trigger
 | `/shell/cmd` | std_msgs/msg/Float64 | motor_state_machine | Gazebo JointPositionController (bridge, gz `/shell_cmd`) / firmware |
 | `/joint_states` | sensor_msgs/msg/JointState | Gazebo JointStatePublisher (bridge) | robot_state_publisher, motor_state_machine |
 | `/odom` | nav_msgs/msg/Odometry | Gazebo DiffDrive (bridge) | ekf_node |
-| `/imu/data` | sensor_msgs/msg/Imu | Gazebo IMU (bridge) / firmware | ekf_node |
+| `/imu/data` | sensor_msgs/msg/Imu | Gazebo IMU (bridge) / firmware | ekf_node, motor_state_machine (swing damping) |
 | `/odometry/filtered` | nav_msgs/msg/Odometry | ekf_node (also TF odom → base_link) | RViz |
 | `/thermal/image_raw` | sensor_msgs/msg/Image (16-bit, K × 100) | Gazebo thermal camera (bridge) / firmware | thermal_celsius_node, thermal_detector_node, RViz |
 | `/thermal/celsius` | sensor_msgs/msg/Image (32FC1, °C per pixel, 32 × 24) | thermal_celsius_node | human detection, print_thermal |
+| `/thermal/image_color` | sensor_msgs/msg/Image (rgb8, fixed 5–40 °C colour scale, 320 × 268) | thermal_celsius_node | Gazebo thermal panel (bridge, ROS → Gazebo), RViz |
 | `/detected_target` | vision_msgs/msg/Detection2DArray | thermal_detector_node | target_localizer_node |
 | `/survivor/position` | geometry_msgs/msg/PointStamped (frame `odom`) | target_localizer_node | — |
 | `/survivor/markers` | visualization_msgs/msg/MarkerArray | target_localizer_node | RViz |
@@ -93,10 +96,7 @@ Values to decide at kickoff. No physical value is invented in this repo.
 
 | Placeholder | File |
 |---|---|
-| `shell_radius`, `rolling_gap`, `shell_extension_max` | `src/sphere_scout_description/urdf/params.xacro` |
-| `core_mass`, `shell_mass`, `core_com_offset_z` | `src/sphere_scout_description/urdf/params.xacro` |
-| thermal and IMU mount poses | `src/sphere_scout_description/urdf/params.xacro` |
-| IMU noise stddevs (angular velocity, linear acceleration) | `src/sphere_scout_description/urdf/sphere.urdf.xacro` |
+| robot values still assumed: `shell_extension_max` (GS-1502 stroke), `ballast_mass`, `slider_mass`, IMU noise, drive limits (the rest come from the CAD and the mass calculator) | `src/sphere_scout_description/urdf/params.xacro` |
 | `t_low_c`, `t_high_c`, `min_pixels` defaults | `src/sphere_scout_ai/sphere_scout_ai/thermal_detector_node.py` |
 | MLX90640, MPU-6050, DRV8833 pin numbers | `firmware/sphere_scout_firmware/src/main.cpp` |
 | package owners and maintainers | this README, `AGENTS.md`, every `package.xml` / `setup.py`, file headers |

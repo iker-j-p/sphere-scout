@@ -43,3 +43,10 @@
   ros_type_name: sensor_msgs/msg/JointState
   gz_type_name: gz.msgs.Model
   direction: GZ_TO_ROS
+
+# Colour thermal view from thermal_celsius_node, shown in the Gazebo "Thermal camera" panel.
+- ros_topic_name: /thermal/image_color
+  gz_topic_name: /thermal/image_color
+  ros_type_name: sensor_msgs/msg/Image
+  gz_type_name: gz.msgs.Image
+  direction: ROS_TO_GZ

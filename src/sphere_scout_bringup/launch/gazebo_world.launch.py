@@ -9,8 +9,10 @@ Starts, in order (every node uses sim time):
   6. RViz with sphere_scout_description/rviz/mission_control.rviz (optional)
 
 Launch args:
-  model     xacro file in sphere_scout_description/urdf. Defaults to the placeholder cube
-            until sphere.urdf.xacro is finished.
+  world     world file in sphere_scout_gazebo/worlds (or a full path). Default apartment.sdf;
+            climb_test.sdf is a course of ramps and steps for measuring what the robot climbs.
+  model     xacro file in sphere_scout_description/urdf. Default sphere.urdf.xacro (the team's
+            CAD); placeholder_cube.urdf.xacro is the earlier stand-in.
   headless  true runs Gazebo server-only with headless rendering (sensors still work).
   rviz      false by default until mission_control.rviz is saved from RViz.
   x y z yaw deployment pose in the world frame. The default is on open ground outside the
@@ -35,7 +37,9 @@ from launch_ros.parameter_descriptions import ParameterValue
 
 def _gazebo(context):
     gazebo_share = get_package_share_directory('sphere_scout_gazebo')
-    world = os.path.join(gazebo_share, 'worlds', 'apartment.sdf')
+    world = LaunchConfiguration('world').perform(context)
+    if not os.path.isabs(world):
+        world = os.path.join(gazebo_share, 'worlds', world)
     headless = LaunchConfiguration('headless').perform(context).lower() == 'true'
     flags = '-s -r --headless-rendering' if headless else '-r'
     gz_sim = os.path.join(get_package_share_directory('ros_gz_sim'), 'launch', 'gz_sim.launch.py')
@@ -57,12 +61,13 @@ def generate_launch_description():
         value_type=str)
 
     return LaunchDescription([
-        DeclareLaunchArgument('model', default_value='placeholder_cube.urdf.xacro'),
+        DeclareLaunchArgument('world', default_value='apartment.sdf'),
+        DeclareLaunchArgument('model', default_value='sphere.urdf.xacro'),
         DeclareLaunchArgument('headless', default_value='false'),
         DeclareLaunchArgument('rviz', default_value='false'),
         DeclareLaunchArgument('x', default_value='5.0'),
         DeclareLaunchArgument('y', default_value='-2.5'),
-        DeclareLaunchArgument('z', default_value='0.08'),
+        DeclareLaunchArgument('z', default_value='0.06'),
         DeclareLaunchArgument('yaw', default_value='0.0'),
 
         AppendEnvironmentVariable('GZ_SIM_RESOURCE_PATH', os.path.join(gazebo_share, 'models')),
