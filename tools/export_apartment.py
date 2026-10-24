@@ -2,7 +2,8 @@
 
 Writes two files into the meshes directory:
   apartment.glb            visual mesh, textures embedded
-  apartment_collision.glb  simplified mesh for physics, no materials
+  apartment_collision.glb  physics mesh: structural parts merged, coplanar faces
+                           dissolved (surface unchanged), no materials
 
 Run headless with Blender 4.2+:
   blender -b --factory-startup --python tools/export_apartment.py -- \
@@ -27,10 +28,10 @@ from mathutils.bvhtree import BVHTree
 
 # Parts the robot can pass through or will never touch; left out of the collision mesh.
 COLLISION_SKIP = ("Glass", "Label", "Copper", "Water", "Fabric")
-# Merge coplanar faces within this angle before decimating (keeps walls and floors exact).
+# Merge coplanar faces within this angle (keeps walls and floors exact). There is no
+# further edge-collapse decimation: on this model it merges the top and bottom of thin
+# floor slabs and leaves holes the robot falls through, at any triangle budget tried.
 DISSOLVE_DEG = 2.0
-# Triangle budget for the collision mesh. Detailed meshes slow physics and snag wheels.
-COLLISION_TARGET_TRIS = 20000
 
 args = sys.argv[sys.argv.index("--") + 1:]
 fbx_path, meshes_dir, tex_dirs = args[0], args[1], args[2:]
@@ -53,12 +54,18 @@ def apply_decimate(obj, **settings):
 
 
 def world_bvh(objs):
-    verts, polys = [], []
+    # Triangulate with bmesh first: BVHTree fan-splits n-gons, which is wrong for concave ones.
+    verts, tris = [], []
     for o in objs:
+        bm = bmesh.new()
+        bm.from_mesh(o.data)
+        bm.transform(o.matrix_world)
+        bmesh.ops.triangulate(bm, faces=bm.faces)
         base = len(verts)
-        verts += [o.matrix_world @ v.co for v in o.data.vertices]
-        polys += [[base + i for i in p.vertices] for p in o.data.polygons]
-    return BVHTree.FromPolygons(verts, polys), verts
+        verts += [v.co.copy() for v in bm.verts]
+        tris += [[base + v.index for v in f.verts] for f in bm.faces]
+        bm.free()
+    return BVHTree.FromPolygons(verts, tris), verts
 
 
 def surface_error(reference, simplified, verts, step=0.5):
@@ -129,10 +136,6 @@ bm.free()
 apply_decimate(col, decimate_type="DISSOLVE", angle_limit=math.radians(DISSOLVE_DEG),
                use_dissolve_boundaries=False)
 print(f"collision tris: {tri_count(col)} after planar dissolve")
-if tri_count(col) > COLLISION_TARGET_TRIS:
-    apply_decimate(col, decimate_type="COLLAPSE", ratio=COLLISION_TARGET_TRIS / tri_count(col),
-                   use_collapse_triangulate=True)
-    print(f"collision tris: {tri_count(col)} after collapse")
 col.data.validate()
 
 errors, holes = surface_error(reference_bvh, world_bvh([col])[0], reference_verts)

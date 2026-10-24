@@ -3,7 +3,6 @@
   <model name="apartment">
     <static>true</static>
     <link name="link">
-      <!-- Visual only for now. A low-poly collision mesh comes next, before the robot drives in. -->
       <visual name="visual">
         <geometry>
           <mesh>
@@ -11,6 +10,23 @@
           </mesh>
         </geometry>
       </visual>
+      <!-- Structural parts only: glass, cloth, labels and wires are left out
+           (see tools/export_apartment.py). -->
+      <collision name="collision">
+        <geometry>
+          <mesh>
+            <uri>model://apartment/meshes/apartment_collision.glb</uri>
+          </mesh>
+        </geometry>
+        <surface>
+          <friction>
+            <ode>
+              <mu>0.9</mu>
+              <mu2>0.9</mu2>
+            </ode>
+          </friction>
+        </surface>
+      </collision>
     </link>
   </model>
 </sdf>
