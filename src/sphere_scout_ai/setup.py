@@ -21,6 +21,8 @@ setup(
     license='MIT',
     entry_points={
         'console_scripts': [
+            'thermal_celsius_node = sphere_scout_ai.thermal_celsius_node:main',
+            'print_thermal = sphere_scout_ai.print_thermal:main',
             'thermal_detector_node = sphere_scout_ai.thermal_detector_node:main',
             'target_localizer_node = sphere_scout_ai.target_localizer_node:main',
         ],

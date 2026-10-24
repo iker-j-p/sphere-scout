@@ -295,12 +295,16 @@
 
     <!-- Survivor: Rescue Randy from Gazebo Fuel (downloaded on first run, then cached). Its
          Thermal system uses a heat-signature texture peaking at 310 K (37 C) on the skin, with
-         cooler clothing. Lying on its back at the edge of the spilled debris, feet at
-         (8.55, -3.35), head towards -y. Keep config/ground_truth.yaml in step with this pose. -->
+         cooler clothing.
+         Trapped at the south edge of the collapse: lying on its back, legs pinned under the
+         fallen ground floor (feet at 14.34, 1.04), head and chest out in a low void under the
+         rubble (head at 13.17, -0.13). That void runs west along the south wall to a mouth at
+         about (8.7, -1.1); no standing rescuer outside can see in, and the robot gets a clear
+         view only from inside. Keep config/ground_truth.yaml in step with this pose. -->
     <include>
       <name>survivor</name>
       <uri>https://fuel.gazebosim.org/1.0/OpenRobotics/models/Rescue Randy</uri>
-      <pose>8.55 -3.35 0.179 1.5708 0 0</pose>
+      <pose>14.34 1.04 0.179 1.5708 0 -0.7854</pose>
     </include>
   </world>
 </sdf>

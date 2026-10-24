@@ -38,8 +38,10 @@ The firmware (`firmware/sphere_scout_firmware`, `COLCON_IGNORE`d) is built separ
 #    is ready; switch with model:=sphere.urdf.xacro.
 ros2 launch sphere_scout_bringup gazebo_world.launch.py
 
-# 2. Perception
+# 2. Perception (for now: the thermal camera in degC on /thermal/celsius)
 ros2 launch sphere_scout_ai perception.launch.py
+#    Print one 32 x 24 frame as a grid of degC
+ros2 run sphere_scout_ai print_thermal
 
 # 3. Motor state machine
 ros2 run sphere_scout_control motor_state_machine --ros-args -p use_sim_time:=true
@@ -64,7 +66,8 @@ ros2 service call /mission/scan std_srvs/srv/Trigger
 | `/odom` | nav_msgs/msg/Odometry | Gazebo DiffDrive (bridge) | ekf_node |
 | `/imu/data` | sensor_msgs/msg/Imu | Gazebo IMU (bridge) / firmware | ekf_node |
 | `/odometry/filtered` | nav_msgs/msg/Odometry | ekf_node (also TF odom → base_link) | RViz |
-| `/thermal/image_raw` | sensor_msgs/msg/Image (16-bit, K × 100) | Gazebo thermal camera (bridge) / firmware | thermal_detector_node, RViz |
+| `/thermal/image_raw` | sensor_msgs/msg/Image (16-bit, K × 100) | Gazebo thermal camera (bridge) / firmware | thermal_celsius_node, thermal_detector_node, RViz |
+| `/thermal/celsius` | sensor_msgs/msg/Image (32FC1, °C per pixel, 32 × 24) | thermal_celsius_node | human detection, print_thermal |
 | `/detected_target` | vision_msgs/msg/Detection2DArray | thermal_detector_node | target_localizer_node |
 | `/survivor/position` | geometry_msgs/msg/PointStamped (frame `odom`) | target_localizer_node | — |
 | `/survivor/markers` | visualization_msgs/msg/MarkerArray | target_localizer_node | RViz |
@@ -100,4 +103,4 @@ Values to decide at kickoff. No physical value is invented in this repo.
 
 Also unresolved: the ESP32-S3 Mini board ID in `firmware/sphere_scout_firmware/platformio.ini` (`TODO: confirm ESP32-S3 Mini board ID`).
 
-Settled since kickoff: the survivor is Rescue Randy from Gazebo Fuel (heat signature peaking at 310 K) lying in the debris outside the south wall (`apartment.sdf`, `ground_truth.yaml`); the robot spawns outside at (5.0, -2.5) (`gazebo_world.launch.py`); the scan defaults are in `motor_state_machine.py`. The first launch downloads Rescue Randy (about 12 MB), so it needs internet once.
+Settled since kickoff: the survivor is Rescue Randy from Gazebo Fuel (heat signature peaking at 310 K), trapped at the south edge of the collapse with its legs under the fallen floor and its head in a low rubble void that only the robot can see into (`apartment.sdf`, `ground_truth.yaml`); the robot spawns outside at (5.0, -2.5) (`gazebo_world.launch.py`); the scan defaults are in `motor_state_machine.py`. The first launch downloads Rescue Randy (about 12 MB), so it needs internet once.
