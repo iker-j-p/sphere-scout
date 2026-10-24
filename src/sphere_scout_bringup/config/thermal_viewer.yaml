@@ -1,0 +1,17 @@
+# Parameters for thermal_viewer_node. See docs/THERMAL_VIEWER_SPEC.md.
+thermal_viewer_node:
+  ros__parameters:
+    use_sim_time: true
+    scale: 20
+    interp: nearest               # nearest keeps the true 32x24 pixels visible
+    colormap: inferno
+    kelvin_per_count: 0.01
+    min_span_k: 15.0              # (A)
+    range_alpha: 0.2              # (A)
+    # fixed_range_k: [285.0, 320.0]   # unset = auto range
+    overlay_max_age_s: 0.25       # (A)
+    stale_s: 0.5                  # (A)
+    watchdog_hz: 2.0
+    pixel_convention: index       # same value as target_localizer.yaml
+    show_colorbar: true
+    show_crosshair: true

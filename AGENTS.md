@@ -24,7 +24,7 @@ Sphere-Scout is a spherical search-and-rescue robot whose two hemispherical shel
 
 ## Layout
 
-The repo root is the colcon workspace: `src/` holds the five ROS packages, `firmware/sphere_scout_firmware` is PlatformIO (`COLCON_IGNORE`d). Build with `colcon build --symlink-install`.
+The repo root is the colcon workspace: `src/` holds the five ROS packages, `firmware/sphere_scout_firmware` is PlatformIO (`COLCON_IGNORE`d). Build with `colcon build --symlink-install`. `tools/xr_viewer` (`COLCON_IGNORE`d) is an external, read-only 3D operator view: `bridge.py` (rclpy + stdlib) forwards `/survivor/markers`, `/thermal/view` (as JPEG, only while a browser is connected) and the `odom → base_link` TF to a browser app (vendored three.js) with a movable thermal-feed window. It adds no topic, type or frame.
 
 ## Topics
 
@@ -39,12 +39,16 @@ The repo root is the colcon workspace: `src/` holds the five ROS packages, `firm
 | `/odom` | nav_msgs/msg/Odometry | Gazebo DiffDrive (bridge) | ekf_node |
 | `/imu/data` | sensor_msgs/msg/Imu | Gazebo IMU (bridge) / firmware | ekf_node |
 | `/odometry/filtered` | nav_msgs/msg/Odometry | ekf_node (also TF odom → base_link) | RViz |
-| `/thermal/image_raw` | sensor_msgs/msg/Image (16-bit, K × 100) | Gazebo thermal camera (bridge) / firmware | thermal_detector_node, RViz |
-| `/detected_target` | vision_msgs/msg/Detection2DArray | thermal_detector_node | target_localizer_node |
+| `/thermal/image_raw` | sensor_msgs/msg/Image (16-bit, K × 100) | Gazebo thermal camera (bridge) / firmware | thermal_detector_node, thermal_viewer_node |
+| `/detected_target` | vision_msgs/msg/Detection2DArray | thermal_detector_node | target_localizer_node, thermal_viewer_node |
 | `/survivor/position` | geometry_msgs/msg/PointStamped (frame `odom`) | target_localizer_node | — |
 | `/survivor/markers` | visualization_msgs/msg/MarkerArray | target_localizer_node | RViz |
+| `/thermal/view` | sensor_msgs/msg/Image (rgb8, reliable, depth 1) | thermal_viewer_node | RViz |
 | `/mission/state` | std_msgs/msg/String | motor_state_machine | — |
 | `/mission/scan` | std_srvs/srv/Trigger (service) | motor_state_machine (server) | operator |
+| `/target_localizer_node/reset` | std_srvs/srv/Trigger (service) | target_localizer_node (server) | operator |
+
+`/thermal/view` (rgb8 render for the driver) and the `~/reset` service are new. `target_localizer_node` is a continuous passive estimator: it does not subscribe to `/mission/state`, `/cmd_vel` or `/odom`, and `/survivor/position` carries triangulated points only. Its parameters are in `src/sphere_scout_bringup/config/target_localizer.yaml` (replacing the stub's `width`, `height`, `min_ray_angle_deg`, `ground_truth_file`); the viewer's are in `thermal_viewer.yaml`. `pixel_convention` must be the same in the detector, localizer and viewer. `target_height_m`, `target_height_sigma_m` and `ground_truth_world` stay unset until Mech 2 provides them.
 
 Gazebo-side topic names differ only for `/shell/cmd` (gz `/shell_cmd`). The thermal image encoding is 16-bit kelvin × 100 (`temp_c = pixel * 0.01 - 273.15`) in both sim and firmware.
 
@@ -54,9 +58,9 @@ Gazebo-side topic names differ only for `/shell/cmd` (gz `/shell_cmd`). The ther
 |---|---|---|
 | `sphere_scout_description` | URDF/xacro, `params.xacro`, meshes, RViz config | TODO(kickoff) |
 | `sphere_scout_gazebo` | `apartment.sdf` world, `apartment` model (built from `Building/` with `tools/export_apartment.py`), ground truth | TODO(kickoff) |
-| `sphere_scout_bringup` | `gazebo_world.launch.py`, bridge and EKF config | TODO(kickoff) |
+| `sphere_scout_bringup` | `gazebo_world.launch.py`, `operator.launch.py` (localizer + viewer + RViz), bridge, EKF, localizer and viewer config | TODO(kickoff) |
 | `sphere_scout_control` | `motor_state_machine` | TODO(kickoff) |
-| `sphere_scout_ai` | `thermal_detector_node`, `target_localizer_node`, `perception.launch.py` | TODO(kickoff) |
+| `sphere_scout_ai` | `thermal_detector_node`, `target_localizer_node`, `thermal_viewer_node`, `perception.launch.py` | TODO(kickoff) |
 | `firmware/sphere_scout_firmware` | ESP32-S3 micro-ROS firmware (PlatformIO) | TODO(kickoff) |
 
 ## Interface changes

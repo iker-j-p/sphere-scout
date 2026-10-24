@@ -1,0 +1,76 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Sphere-Scout operator view</title>
+  <style>
+    html, body { margin: 0; height: 100%; overflow: hidden; background: #1b1f24; color: #e8eaed;
+                 font: 14px/1.35 system-ui, sans-serif; }
+    canvas { display: block; }
+    #hud { position: fixed; left: 12px; top: 12px; max-width: 460px; padding: 10px 12px;
+           background: rgba(20, 24, 28, .82); border-radius: 8px; }
+    #hud h1 { margin: 0 0 6px; font-size: 14px; font-weight: 600; }
+    #status { margin: 6px 0 0; white-space: pre-wrap; font: 13px/1.4 ui-monospace, monospace; }
+    #conn { font-size: 12px; opacity: .9; }
+    #conn.ok::before { content: "\25CF "; color: #3ddc84; }
+    #conn.bad::before { content: "\25CF "; color: #ff5252; }
+    #warn { margin-top: 6px; color: #ffb74d; font-size: 12px; display: none; }
+    button { margin: 8px 6px 0 0; padding: 4px 10px; border: 0; border-radius: 4px;
+             background: #3b4652; color: inherit; cursor: pointer; }
+    button:focus-visible { outline: 2px solid #8ab4f8; outline-offset: 2px; }
+    #help { margin-top: 8px; font-size: 12px; opacity: .75; }
+
+    /* movable thermal feed window */
+    /* inset outline instead of a border, so the box is exactly the width the layout code computes */
+    #thermal { position: fixed; z-index: 5; background: #000; outline: 1px solid #56606b; outline-offset: -1px;
+               border-radius: 6px; overflow: hidden; box-shadow: 0 4px 18px rgba(0, 0, 0, .55); touch-action: none; }
+    #thermal[hidden] { display: none; }
+    #thermal.dragging { outline-color: #8ab4f8; }
+    #thermal-bar { height: 30px; box-sizing: border-box; display: flex; align-items: center; gap: 6px;
+                   padding: 0 4px 0 10px; background: #2a323b; cursor: move; user-select: none; }
+    #thermal-bar:focus-visible { outline: 2px solid #8ab4f8; outline-offset: -2px; }
+    #thermal-title { font-size: 12px; font-weight: 600; flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    #thermal-meta { font-size: 12px; opacity: .8; }
+    #thermal-bar button { margin: 0; padding: 0; width: 24px; height: 22px; line-height: 20px; background: #3b4652; font-size: 14px; }
+    #thermal-canvas { display: block; width: 100%; aspect-ratio: 4 / 3; background: #000; }
+    #thermal-stale { position: absolute; left: 0; right: 0; top: 30px; bottom: 0; display: flex; align-items: center;
+                     justify-content: center; background: rgba(0, 0, 0, .72); color: #ff8a80;
+                     font: 600 15px ui-monospace, monospace; text-align: center; padding: 8px; }
+    #thermal-stale[hidden] { display: none; }
+    #thermal-grip { position: absolute; right: 0; bottom: 0; width: 18px; height: 18px; cursor: nwse-resize;
+                    background: linear-gradient(135deg, transparent 50%, rgba(255, 255, 255, .75) 50%, rgba(255, 255, 255, .75) 60%,
+                                                transparent 60%, transparent 72%, rgba(255, 255, 255, .75) 72%, rgba(255, 255, 255, .75) 82%, transparent 82%); }
+  </style>
+  <script type="importmap">
+    { "imports": { "three": "./vendor/three/build/three.module.js",
+                   "three/addons/": "./vendor/three/examples/jsm/" } }
+  </script>
+</head>
+<body>
+  <div id="hud">
+    <h1>Sphere-Scout operator view (frame odom = start point)</h1>
+    <div id="conn" class="bad" role="status">connecting&hellip;</div>
+    <pre id="status" aria-live="polite">waiting for /survivor/markers&hellip;</pre>
+    <div id="warn"></div>
+    <button id="xray" type="button">Solid / X-ray building (X)</button>
+    <button id="trail" type="button">Clear trail (C)</button>
+    <button id="thermalBtn" type="button">Thermal feed (T)</button>
+    <div id="help">Mouse: drag = orbit, wheel = zoom, right-drag = pan.
+      Thermal window: drag its title bar to move it, drag the corner to resize, arrow keys on the title bar
+      move it (Shift+arrows resize).</div>
+  </div>
+  <section id="thermal" aria-label="Robot thermal camera feed">
+    <div id="thermal-bar" tabindex="0" role="group" aria-label="Thermal window title bar. Arrow keys move, Shift plus arrow keys resize.">
+      <span id="thermal-title">Robot thermal feed</span>
+      <span id="thermal-meta"></span>
+      <button id="thermal-corner" type="button" title="Move to the next corner" aria-label="Move thermal window to the next corner">&#8689;</button>
+      <button id="thermal-hide" type="button" title="Hide (T)" aria-label="Hide thermal window">&times;</button>
+    </div>
+    <canvas id="thermal-canvas" width="640" height="480" role="img" aria-label="Live thermal camera image"></canvas>
+    <div id="thermal-stale">no frames received yet</div>
+    <div id="thermal-grip" aria-hidden="true"></div>
+  </section>
+  <script type="module" src="./app.js"></script>
+</body>
+</html>

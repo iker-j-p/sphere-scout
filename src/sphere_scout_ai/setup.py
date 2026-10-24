@@ -23,6 +23,7 @@ setup(
         'console_scripts': [
             'thermal_detector_node = sphere_scout_ai.thermal_detector_node:main',
             'target_localizer_node = sphere_scout_ai.target_localizer_node:main',
+            'thermal_viewer_node = sphere_scout_ai.thermal_viewer_node:main',
         ],
     },
 )
