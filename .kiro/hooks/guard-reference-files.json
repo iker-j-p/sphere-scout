@@ -1,0 +1,16 @@
+{
+  "version": "v1",
+  "hooks": [
+    {
+      "name": "Confirm edits to tested reference modules",
+      "trigger": "PreToolUse",
+      "description": "Asks for confirmation before triangulation.py or thermal_render.py is changed. Silent for every other file.",
+      "matcher": "fs_write|str_replace|fs_append",
+      "action": {
+        "type": "command",
+        "command": "f=\"$(git rev-parse --show-toplevel 2>/dev/null || pwd)/.kiro/scripts/guard.py\"; [ -f \"$f\" ] || exit 0; python3 \"$f\" reference",
+        "timeout": 10
+      }
+    }
+  ]
+}
