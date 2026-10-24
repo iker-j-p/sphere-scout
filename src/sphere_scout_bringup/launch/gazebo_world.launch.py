@@ -6,7 +6,9 @@ Starts, in order (every node uses sim time):
   3. ros_gz_sim create: spawns sphere_scout at the entry pose
   4. ros_gz_bridge parameter_bridge with config/bridge.yaml
   5. robot_localization ekf_node with config/ekf.yaml
-  6. RViz with sphere_scout_description/rviz/mission_control.rviz (optional)
+  6. image_transport republish: /camera/image_raw -> /camera/image_raw/compressed (JPEG), the
+     format the robot's OV2640 sends on hardware
+  7. RViz with sphere_scout_description/rviz/mission_control.rviz (optional)
 
 Launch args:
   world     world file in sphere_scout_gazebo/worlds (or a full path). Default apartment.sdf;
@@ -90,6 +92,13 @@ def generate_launch_description():
 
         Node(package='robot_localization', executable='ekf_node', name='ekf_filter_node',
              parameters=[os.path.join(bringup_share, 'config', 'ekf.yaml'), sim_time],
+             output='screen'),
+
+        Node(package='image_transport', executable='republish', name='camera_jpeg',
+             parameters=[{'in_transport': 'raw', 'out_transport': 'compressed',
+                          'out.compressed.jpeg_quality': 80}, sim_time],
+             remappings=[('in', '/camera/image_raw'),
+                         ('out/compressed', '/camera/image_raw/compressed')],
              output='screen'),
 
         Node(package='rviz2', executable='rviz2',

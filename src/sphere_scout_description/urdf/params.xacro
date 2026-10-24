@@ -55,6 +55,14 @@
        the gap, team); MPU-6050 board -->
   <xacro:property name="thermal_xyz" value="0.0305 0 0"/>
   <xacro:property name="thermal_rpy" value="0 0 0"/>
+  <!-- RGB camera (team: OV2640 on an ESP32-S3, for example XIAO ESP32S3 Sense; pose, lens and
+       rate assumed): just above the MLX90640 in the shell gap, looking forward -->
+  <xacro:property name="rgb_xyz" value="0.0295 0 0.011"/>
+  <xacro:property name="rgb_rpy" value="0 0 0"/>
+  <xacro:property name="rgb_hfov" value="1.152"/>                <!-- 66 deg -->
+  <xacro:property name="rgb_width" value="320"/>
+  <xacro:property name="rgb_height" value="240"/>
+  <xacro:property name="rgb_rate" value="15"/>
   <xacro:property name="imu_xyz" value="0 -0.025 -0.0195"/>
   <xacro:property name="imu_rpy" value="0 0 0"/>
   <xacro:property name="gyro_noise" value="0.001"/>              <!-- rad/s, assumed (MPU-6050 at 100 Hz) -->

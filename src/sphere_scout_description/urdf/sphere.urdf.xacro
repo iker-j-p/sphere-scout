@@ -11,6 +11,7 @@
       right_shell_joint (prismatic, -y: a positive /shell/cmd opens both shells) -> right_slider
         right_wheel_joint (continuous, y)             -> right_shell
       thermal_joint (fixed)       -> thermal_link     MLX90640, looks along +x
+      camera_joint  (fixed)       -> camera_link      OV2640 RGB camera, looks along +x
       imu_joint     (fixed)       -> imu_link         MPU-6050
   Each shell link sits on its rim plane. Its collision is a sphere of shell_radius centred
   there, which touches the ground at the rim plane like the hemisphere does; the visual is the
@@ -117,6 +118,13 @@
   </joint>
   <link name="thermal_link"/>
 
+  <joint name="camera_joint" type="fixed">
+    <parent link="base_link"/>
+    <child link="camera_link"/>
+    <origin xyz="${rgb_xyz}" rpy="${rgb_rpy}"/>
+  </joint>
+  <link name="camera_link"/>
+
   <joint name="imu_joint" type="fixed">
     <parent link="base_link"/>
     <child link="imu_link"/>
@@ -179,6 +187,23 @@
       <plugin filename="gz-sim-thermal-sensor-system" name="gz::sim::systems::ThermalSensor">
         <resolution>0.01</resolution>  <!-- kelvin per pixel count -->
       </plugin>
+    </sensor>
+  </gazebo>
+
+  <!-- RGB feed. The OV2640 gives JPEG; in simulation gazebo_world.launch.py compresses this raw
+       image to /camera/image_raw/compressed the same way. Dark inside voids: it has no light. -->
+  <gazebo reference="camera_link">
+    <sensor name="rgb_camera" type="camera">
+      <gz_frame_id>camera_link</gz_frame_id>
+      <topic>/camera/image_raw</topic>
+      <update_rate>${rgb_rate}</update_rate>
+      <always_on>true</always_on>
+      <camera>
+        <horizontal_fov>${rgb_hfov}</horizontal_fov>
+        <image><width>${rgb_width}</width><height>${rgb_height}</height><format>R8G8B8</format></image>
+        <clip><near>0.01</near><far>50</far></clip>
+        <noise type="gaussian"><mean>0</mean><stddev>0.007</stddev></noise>
+      </camera>
     </sensor>
   </gazebo>
 

@@ -71,6 +71,8 @@ ros2 service call /mission/scan std_srvs/srv/Trigger
 | `/thermal/image_raw` | sensor_msgs/msg/Image (16-bit, K × 100) | Gazebo thermal camera (bridge) / firmware | thermal_celsius_node, thermal_detector_node, RViz |
 | `/thermal/celsius` | sensor_msgs/msg/Image (32FC1, °C per pixel, 32 × 24) | thermal_celsius_node | human detection, print_thermal |
 | `/thermal/image_color` | sensor_msgs/msg/Image (rgb8, fixed 5–40 °C colour scale, 320 × 268) | thermal_celsius_node | Gazebo thermal panel (bridge, ROS → Gazebo), RViz |
+| `/camera/image_raw` | sensor_msgs/msg/Image (rgb8, 320 × 240, OV2640) | Gazebo RGB camera (bridge) | camera_jpeg republisher, RViz |
+| `/camera/image_raw/compressed` | sensor_msgs/msg/CompressedImage (JPEG, quality 80, ~7 kB) | camera_jpeg (sim) / firmware (OV2640 JPEG) | XR headset |
 | `/detected_target` | vision_msgs/msg/Detection2DArray | thermal_detector_node | target_localizer_node |
 | `/survivor/position` | geometry_msgs/msg/PointStamped (frame `odom`) | target_localizer_node | — |
 | `/survivor/markers` | visualization_msgs/msg/MarkerArray | target_localizer_node | RViz |
