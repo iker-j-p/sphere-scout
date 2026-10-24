@@ -1,0 +1,9 @@
+# ekf.yaml: robot_localization ekf_node config.
+# Owner: TODO(kickoff)
+#
+# TODO:
+#   use_sim_time: true
+#   frequency: 30, two_d_mode: false
+#   world_frame: odom, odom_frame: odom, base_link_frame: base_link
+#   odom0: /odom      fuse vx, vy, vz
+#   imu0:  /imu/data  fuse roll, pitch, vroll, vpitch, vyaw   (no absolute yaw)

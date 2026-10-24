@@ -1,0 +1,5 @@
+# ground_truth.yaml: survivor stand-in pose, used by target_localizer_node to score estimates.
+# Owner: TODO(kickoff)
+#
+# TODO(kickoff): survivor stand-in pose in the world frame. Must match worlds/apartment.sdf
+#   (the survivor stand-in is not in that world yet).
