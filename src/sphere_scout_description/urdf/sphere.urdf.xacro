@@ -190,8 +190,30 @@
     </sensor>
   </gazebo>
 
+  <!-- LED headlight on the core, so it tips with the cameras -->
+  <gazebo reference="base_link">
+    <light name="headlight" type="spot">
+      <pose>${headlight_xyz} 0 0 0</pose>
+      <direction>1 0 0</direction>
+      <diffuse>1.0 0.96 0.88 1</diffuse>
+      <specular>0.3 0.3 0.3 1</specular>
+      <attenuation>
+        <range>${headlight_range}</range>
+        <constant>0.3</constant>
+        <linear>0.12</linear>
+        <quadratic>0.04</quadratic>
+      </attenuation>
+      <spot>
+        <inner_angle>${headlight_inner}</inner_angle>
+        <outer_angle>${headlight_outer}</outer_angle>
+        <falloff>1.0</falloff>
+      </spot>
+      <cast_shadows>false</cast_shadows>
+    </light>
+  </gazebo>
+
   <!-- RGB feed. The OV2640 gives JPEG; in simulation gazebo_world.launch.py compresses this raw
-       image to /camera/image_raw/compressed the same way. Dark inside voids: it has no light. -->
+       image to /camera/image_raw/compressed the same way. At night it sees by the headlight. -->
   <gazebo reference="camera_link">
     <sensor name="rgb_camera" type="camera">
       <gz_frame_id>camera_link</gz_frame_id>
@@ -202,7 +224,7 @@
         <horizontal_fov>${rgb_hfov}</horizontal_fov>
         <image><width>${rgb_width}</width><height>${rgb_height}</height><format>R8G8B8</format></image>
         <clip><near>0.01</near><far>50</far></clip>
-        <noise type="gaussian"><mean>0</mean><stddev>0.007</stddev></noise>
+        <noise><type>gaussian</type><mean>0</mean><stddev>0.007</stddev></noise>
       </camera>
     </sensor>
   </gazebo>

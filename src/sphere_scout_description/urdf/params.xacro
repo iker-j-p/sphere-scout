@@ -63,6 +63,13 @@
   <xacro:property name="rgb_width" value="320"/>
   <xacro:property name="rgb_height" value="240"/>
   <xacro:property name="rgb_rate" value="15"/>
+  <!-- white LED headlight for the RGB camera at night (assumed: about a 1 W LED with a 50 deg
+       beam), just under the camera -->
+  <xacro:property name="headlight_xyz" value="0.031 0 0.004"/>
+  <xacro:property name="headlight_range" value="8"/>
+  <xacro:property name="headlight_inner" value="0.5"/>          <!-- rad, full-brightness cone -->
+  <xacro:property name="headlight_outer" value="0.9"/>          <!-- rad, edge of the beam -->
+
   <xacro:property name="imu_xyz" value="0 -0.025 -0.0195"/>
   <xacro:property name="imu_rpy" value="0 0 0"/>
   <xacro:property name="gyro_noise" value="0.001"/>              <!-- rad/s, assumed (MPU-6050 at 100 Hz) -->
