@@ -1,5 +1,20 @@
-# ground_truth.yaml: survivor stand-in pose, used by target_localizer_node to score estimates.
-# Owner: TODO(kickoff)
-#
-# TODO(kickoff): survivor stand-in pose in the world frame. Must match worlds/apartment.sdf
-#   (the survivor stand-in is not in that world yet).
+# ground_truth.yaml: survivor pose, used by target_localizer_node to score estimates.
+# Must match the `survivor` include in worlds/apartment.sdf.
+
+# Rescue Randy lying on its back at the south edge of the collapse: legs pinned under the
+# fallen ground floor, head and chest out in a low void under the rubble. Only the head and
+# chest are visible, so `head` is the point a thermal-blob triangulation should land near.
+# World frame, metres.
+survivor:
+  world:
+    head: {x: 13.17, y: -0.13, z: 0.18}
+    centre: {x: 13.76, y: 0.46, z: 0.18}   # middle of the body, mostly buried
+    feet: {x: 14.34, y: 1.04, z: 0.18}
+
+# odom = the robot's base_link at spawn (gazebo_world.launch.py defaults: x 5.0, y -2.5,
+# yaw 0; base_link is the axle, 0.06 m above the ground). With yaw 0, odom = world - spawn.
+spawn:
+  world: {x: 5.0, y: -2.5, z: 0.06, yaw: 0.0}
+
+# Survivor head in odom for the default spawn. Recompute if the spawn pose changes.
+survivor_head_odom: {x: 8.17, y: 2.37, z: 0.12}

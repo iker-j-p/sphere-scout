@@ -33,11 +33,17 @@ The firmware (`firmware/sphere_scout_firmware`, `COLCON_IGNORE`d) is built separ
 ## Run
 
 ```bash
-# 1. Simulation: Gazebo, robot, bridge, EKF, RViz (add headless:=true rviz:=false on WSL without a GPU)
+# 1. Simulation: Gazebo, robot, bridge, EKF (headless:=true for no GUI; rviz:=true once
+#    mission_control.rviz is saved). The robot is the team's 9 cm sphere (sphere.urdf.xacro);
+#    model:=placeholder_cube.urdf.xacro gives the earlier stand-in, and world:=climb_test.sdf
+#    a course of ramps and steps.
 ros2 launch sphere_scout_bringup gazebo_world.launch.py
 
-# 2. Perception
+# 2. Perception (for now: the thermal camera in degC on /thermal/celsius, and the colour
+#    5-40 degC view that the Gazebo "Thermal camera" panel shows)
 ros2 launch sphere_scout_ai perception.launch.py
+#    Print one 32 x 24 frame as a grid of degC
+ros2 run sphere_scout_ai print_thermal
 
 # 2b. Operator side: target_localizer_node, thermal_viewer_node, RViz
 ros2 launch sphere_scout_bringup operator.launch.py   # rviz:=false to skip RViz
@@ -47,7 +53,7 @@ ros2 launch sphere_scout_bringup operator.launch.py   # rviz:=false to skip RViz
 python3 tools/xr_viewer/bridge.py        # then open http://localhost:8765
 
 # 3. Motor state machine
-ros2 run sphere_scout_control motor_state_machine
+ros2 run sphere_scout_control motor_state_machine --ros-args -p use_sim_time:=true
 
 # 4. Teleop (into the state machine, not straight to the robot)
 ros2 run teleop_twist_keyboard teleop_twist_keyboard --ros-args -r cmd_vel:=cmd_vel_teleop
@@ -67,9 +73,13 @@ ros2 service call /mission/scan std_srvs/srv/Trigger
 | `/shell/cmd` | std_msgs/msg/Float64 | motor_state_machine | Gazebo JointPositionController (bridge, gz `/shell_cmd`) / firmware |
 | `/joint_states` | sensor_msgs/msg/JointState | Gazebo JointStatePublisher (bridge) | robot_state_publisher, motor_state_machine |
 | `/odom` | nav_msgs/msg/Odometry | Gazebo DiffDrive (bridge) | ekf_node |
-| `/imu/data` | sensor_msgs/msg/Imu | Gazebo IMU (bridge) / firmware | ekf_node |
+| `/imu/data` | sensor_msgs/msg/Imu | Gazebo IMU (bridge) / firmware | ekf_node, motor_state_machine (swing damping) |
 | `/odometry/filtered` | nav_msgs/msg/Odometry | ekf_node (also TF odom → base_link) | RViz |
-| `/thermal/image_raw` | sensor_msgs/msg/Image (16-bit, K × 100) | Gazebo thermal camera (bridge) / firmware | thermal_detector_node, thermal_viewer_node |
+| `/thermal/image_raw` | sensor_msgs/msg/Image (16-bit, K × 100) | Gazebo thermal camera (bridge) / firmware | thermal_celsius_node, thermal_detector_node, thermal_viewer_node |
+| `/thermal/celsius` | sensor_msgs/msg/Image (32FC1, °C per pixel, 32 × 24) | thermal_celsius_node | human detection, print_thermal |
+| `/thermal/image_color` | sensor_msgs/msg/Image (rgb8, fixed 5–40 °C colour scale, 320 × 268) | thermal_celsius_node | Gazebo thermal panel (bridge, ROS → Gazebo), RViz |
+| `/camera/image_raw` | sensor_msgs/msg/Image (rgb8, 320 × 240, OV2640) | Gazebo RGB camera (bridge) | camera_jpeg republisher, RViz |
+| `/camera/image_raw/compressed` | sensor_msgs/msg/CompressedImage (JPEG, quality 80, ~7 kB) | camera_jpeg (sim) / firmware (OV2640 JPEG) | XR headset |
 | `/detected_target` | vision_msgs/msg/Detection2DArray | thermal_detector_node | target_localizer_node, thermal_viewer_node |
 | `/survivor/position` | geometry_msgs/msg/PointStamped (frame `odom`) | target_localizer_node | — |
 | `/survivor/markers` | visualization_msgs/msg/MarkerArray | target_localizer_node | RViz |
@@ -99,18 +109,13 @@ Values to decide at kickoff. No physical value is invented in this repo.
 
 | Placeholder | File |
 |---|---|
-| `shell_radius`, `rolling_gap`, `shell_extension_max` | `src/sphere_scout_description/urdf/params.xacro` |
-| `core_mass`, `shell_mass`, `core_com_offset_z` | `src/sphere_scout_description/urdf/params.xacro` |
-| thermal and IMU mount poses | `src/sphere_scout_description/urdf/params.xacro` |
-| IMU noise stddevs (angular velocity, linear acceleration) | `src/sphere_scout_description/urdf/sphere.urdf.xacro` |
-| survivor stand-in pose and size (static box, visual with the Thermal system at 310 K; not in the world yet) | `src/sphere_scout_gazebo/worlds/apartment.sdf` |
-| survivor stand-in pose (must match the world) | `src/sphere_scout_gazebo/config/ground_truth.yaml` |
+| robot values still assumed: `shell_extension_max` (GS-1502 stroke), `ballast_mass`, `slider_mass`, IMU noise, drive limits (the rest come from the CAD and the mass calculator) | `src/sphere_scout_description/urdf/params.xacro` |
 | `target_height_m`, `target_height_sigma_m` (enable the one-view PROVISIONAL estimate), `ground_truth_world`, `spawn_pose` | `src/sphere_scout_bringup/config/target_localizer.yaml` (commented out / default until Mech 2 gives values) |
 | RViz layout `sphere_scout.rviz` (save from the RViz2 GUI: fixed frame `odom`, Image `/thermal/view` Reliable, MarkerArray `/survivor/markers`, TF) | `src/sphere_scout_description/rviz/` |
-| spawn entry pose defaults | `src/sphere_scout_bringup/launch/gazebo_world.launch.py` |
-| `rolling_gap_cmd`, `expanded_cmd`, `scan_step_deg`, `scan_steps`, `scan_hold_s`, `scan_yaw_rate` defaults | `src/sphere_scout_control/sphere_scout_control/motor_state_machine.py` |
 | `t_low_c`, `t_high_c`, `min_pixels` defaults | `src/sphere_scout_ai/sphere_scout_ai/thermal_detector_node.py` |
 | MLX90640, MPU-6050, DRV8833 pin numbers | `firmware/sphere_scout_firmware/src/main.cpp` |
 | package owners and maintainers | this README, `AGENTS.md`, every `package.xml` / `setup.py`, file headers |
 
 Also unresolved: the ESP32-S3 Mini board ID in `firmware/sphere_scout_firmware/platformio.ini` (`TODO: confirm ESP32-S3 Mini board ID`).
+
+Settled since kickoff: the survivor is Rescue Randy from Gazebo Fuel (heat signature peaking at 310 K), trapped at the south edge of the collapse with its legs under the fallen floor and its head in a low rubble void that only the robot can see into (`apartment.sdf`, `ground_truth.yaml`); the robot spawns outside at (5.0, -2.5) (`gazebo_world.launch.py`); the scan defaults are in `motor_state_machine.py`. The first launch downloads Rescue Randy (about 12 MB), so it needs internet once.

@@ -1,14 +1,61 @@
 <?xml version="1.0"?>
+<!--
+  apartment: the collapsed building. One visual per thermal group (tools/export_apartment.py),
+  each with a night-time surface temperature for the thermal camera. Air is 15 C (the world's
+  atmosphere); anything without a temperature reads as air.
+    brick     17 C   outer walls still giving off the day's heat
+    concrete  16 C   slabs and most of the rubble
+    finish    18 C   interior plaster and paint, sheltered
+    metal     12 C   rails, rebar, pipes: radiate to the cold night sky
+    wood      15 C
+    glass      8 C   reflects the cold sky
+    other     15 C   fabric, labels, fittings
+-->
 <sdf version="1.9">
   <model name="apartment">
     <static>true</static>
     <link name="link">
-      <visual name="visual">
-        <geometry>
-          <mesh>
-            <uri>model://apartment/meshes/apartment.glb</uri>
-          </mesh>
-        </geometry>
+      <visual name="brick">
+        <geometry><mesh><uri>model://apartment/meshes/visual_brick.glb</uri></mesh></geometry>
+        <plugin filename="gz-sim-thermal-system" name="gz::sim::systems::Thermal">
+          <temperature>290.15</temperature>
+        </plugin>
+      </visual>
+      <visual name="concrete">
+        <geometry><mesh><uri>model://apartment/meshes/visual_concrete.glb</uri></mesh></geometry>
+        <plugin filename="gz-sim-thermal-system" name="gz::sim::systems::Thermal">
+          <temperature>289.15</temperature>
+        </plugin>
+      </visual>
+      <visual name="finish">
+        <geometry><mesh><uri>model://apartment/meshes/visual_finish.glb</uri></mesh></geometry>
+        <plugin filename="gz-sim-thermal-system" name="gz::sim::systems::Thermal">
+          <temperature>291.15</temperature>
+        </plugin>
+      </visual>
+      <visual name="metal">
+        <geometry><mesh><uri>model://apartment/meshes/visual_metal.glb</uri></mesh></geometry>
+        <plugin filename="gz-sim-thermal-system" name="gz::sim::systems::Thermal">
+          <temperature>285.15</temperature>
+        </plugin>
+      </visual>
+      <visual name="wood">
+        <geometry><mesh><uri>model://apartment/meshes/visual_wood.glb</uri></mesh></geometry>
+        <plugin filename="gz-sim-thermal-system" name="gz::sim::systems::Thermal">
+          <temperature>288.15</temperature>
+        </plugin>
+      </visual>
+      <visual name="glass">
+        <geometry><mesh><uri>model://apartment/meshes/visual_glass.glb</uri></mesh></geometry>
+        <plugin filename="gz-sim-thermal-system" name="gz::sim::systems::Thermal">
+          <temperature>281.15</temperature>
+        </plugin>
+      </visual>
+      <visual name="other">
+        <geometry><mesh><uri>model://apartment/meshes/visual_other.glb</uri></mesh></geometry>
+        <plugin filename="gz-sim-thermal-system" name="gz::sim::systems::Thermal">
+          <temperature>288.15</temperature>
+        </plugin>
       </visual>
       <!-- Structural parts only: glass, cloth, labels and wires are left out
            (see tools/export_apartment.py). -->

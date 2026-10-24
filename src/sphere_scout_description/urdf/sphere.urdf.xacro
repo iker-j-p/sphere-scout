@@ -1,33 +1,227 @@
 <?xml version="1.0"?>
 <!--
-  sphere.urdf.xacro: Sphere-Scout robot model.
-  Owner: TODO(kickoff)
+  sphere.urdf.xacro: Sphere-Scout robot model, built from the team's CAD (meshes/*.stl).
+  Every number comes from params.xacro.
 
-  TODO: include params.xacro; no literal dimensions in this file.
-
-  TODO: link/joint tree
-    base_link                     core; CoM offset below the axle by core_com_offset_z
-    left_shell_joint  (prismatic, along the axle)  -> left_slider
-    left_wheel_joint  (continuous)                  -> left_shell
-    right_shell_joint (prismatic, axis REVERSED so a positive command opens both shells) -> right_slider
-    right_wheel_joint (continuous)                  -> right_shell
-    thermal_joint     (fixed) -> thermal_link       camera faces +X
-    imu_joint         (fixed) -> imu_link
-  TODO: each shell collision = one sphere of radius shell_radius, centered on the axle at the
-        shell's rim plane. Visuals: simple primitives for now.
-  TODO: inertias from standard solid-body formulas using the params; no zero or near-zero values.
-
-  TODO: Gazebo Harmonic blocks (gz-sim-*-system filenames, gz::sim::systems::* names only)
-    - DiffDrive: left/right wheel joints, wheel_separation = rolling_gap, wheel_radius = shell_radius,
-      topic cmd_vel, odom_topic odom, frame_id odom, child_frame_id base_link
-    - JointPositionController x2 (one per prismatic joint), both on topic shell_cmd
-    - JointStatePublisher on topic joint_states
-    - thermal sensor on thermal_link: type thermal, topic thermal/image_raw, update_rate 8,
-      horizontal_fov 0.96, 32 x 24, format L16, clip 0.05 to 20,
-      ThermalSensor system with resolution 0.01
-    - IMU sensor on imu_link: topic imu/data, update_rate 100, always_on, gaussian noise on
-      angular velocity and linear acceleration (stddevs: TODO(kickoff))
+  Link and joint tree
+    base_link                     core (electronics, motors, LiPo); CoM below the axle
+      ballast_joint (fixed)       -> ballast_link     lead weight under the LiPo
+      left_shell_joint  (prismatic, +y)               -> left_slider
+        left_wheel_joint  (continuous, y)             -> left_shell
+      right_shell_joint (prismatic, -y: a positive /shell/cmd opens both shells) -> right_slider
+        right_wheel_joint (continuous, y)             -> right_shell
+      thermal_joint (fixed)       -> thermal_link     MLX90640, looks along +x
+      camera_joint  (fixed)       -> camera_link      OV2640 RGB camera, looks along +x
+      imu_joint     (fixed)       -> imu_link         MPU-6050
+  Each shell link sits on its rim plane. Its collision is a sphere of shell_radius centred
+  there, which touches the ground at the rim plane like the hemisphere does; the visual is the
+  CAD shell. The core's lowest parts get a box collision so the belly can catch on rubble.
   No ros2_control.
 -->
 <robot name="sphere_scout" xmlns:xacro="http://www.ros.org/wiki/xacro">
+  <xacro:include filename="$(find sphere_scout_description)/urdf/params.xacro"/>
+  <xacro:property name="mesh_dir" value="file://$(find sphere_scout_description)/meshes"/>
+  <xacro:property name="mm" value="0.001 0.001 0.001"/>
+
+  <link name="base_link">
+    <inertial>
+      <origin xyz="${core_com_x} ${core_com_y} ${-core_com_offset_z}"/>
+      <mass value="${core_mass}"/>
+      <inertia ixx="${core_ixx}" iyy="${core_iyy}" izz="${core_izz}" ixy="0" ixz="${core_ixz}" iyz="0"/>
+    </inertial>
+    <visual>
+      <origin xyz="${core_mesh_offset}"/>
+      <geometry><mesh filename="${mesh_dir}/core.stl" scale="${mm}"/></geometry>
+      <material name="core_orange"><color rgba="0.95 0.5 0.15 1"/></material>
+    </visual>
+    <collision name="belly">
+      <origin xyz="${belly_xyz}"/>
+      <geometry><box size="${belly_size}"/></geometry>
+    </collision>
+  </link>
+  <gazebo reference="base_link">
+    <mu1>${belly_mu}</mu1>
+    <mu2>${belly_mu}</mu2>
+  </gazebo>
+
+  <joint name="ballast_joint" type="fixed">
+    <parent link="base_link"/>
+    <child link="ballast_link"/>
+    <origin xyz="${ballast_xyz}"/>
+  </joint>
+  <link name="ballast_link">
+    <xacro:property name="bx" value="${ballast_size.split()}"/>
+    <inertial>
+      <mass value="${ballast_mass}"/>
+      <inertia ixx="${ballast_mass * (float(bx[1])**2 + float(bx[2])**2) / 12}"
+               iyy="${ballast_mass * (float(bx[0])**2 + float(bx[2])**2) / 12}"
+               izz="${ballast_mass * (float(bx[0])**2 + float(bx[1])**2) / 12}"
+               ixy="0" ixz="0" iyz="0"/>
+    </inertial>
+    <visual>
+      <geometry><box size="${ballast_size}"/></geometry>
+      <material name="lead_grey"><color rgba="0.3 0.3 0.33 1"/></material>
+    </visual>
+  </link>
+
+  <!-- side: +1 left, -1 right. The left mesh is the CAD shell turned 180 deg about z so its
+       pole faces +y; both meshes are moved so the rim centre is the link origin. -->
+  <xacro:macro name="shell" params="name side mesh_rpy mesh_xyz">
+    <joint name="${name}_shell_joint" type="prismatic">
+      <parent link="base_link"/>
+      <child link="${name}_slider"/>
+      <origin xyz="0 ${side * rolling_gap / 2} 0"/>
+      <axis xyz="0 ${side} 0"/>
+      <limit lower="0" upper="${shell_extension_max}" effort="1" velocity="0.05"/>
+    </joint>
+    <link name="${name}_slider">
+      <inertial>
+        <mass value="${slider_mass}"/>
+        <inertia ixx="1e-6" iyy="1e-6" izz="1e-6" ixy="0" ixz="0" iyz="0"/>
+      </inertial>
+    </link>
+    <joint name="${name}_wheel_joint" type="continuous">
+      <parent link="${name}_slider"/>
+      <child link="${name}_shell"/>
+      <axis xyz="0 1 0"/>
+    </joint>
+    <link name="${name}_shell">
+      <!-- thin hemispherical shell: CoM half a radius out from the rim plane -->
+      <inertial>
+        <origin xyz="0 ${side * shell_radius / 2} 0"/>
+        <mass value="${shell_mass}"/>
+        <inertia ixx="${5.0 / 12 * shell_mass * shell_radius**2}" iyy="${2.0 / 3 * shell_mass * shell_radius**2}"
+                 izz="${5.0 / 12 * shell_mass * shell_radius**2}" ixy="0" ixz="0" iyz="0"/>
+      </inertial>
+      <visual>
+        <origin xyz="${mesh_xyz}" rpy="${mesh_rpy}"/>
+        <geometry><mesh filename="${mesh_dir}/${name}_shell.stl" scale="${mm}"/></geometry>
+        <material name="shell_grey"><color rgba="0.72 0.75 0.78 1"/></material>
+      </visual>
+      <collision>
+        <geometry><sphere radius="${shell_radius}"/></geometry>
+      </collision>
+    </link>
+    <gazebo reference="${name}_shell">
+      <mu1>${shell_mu}</mu1>
+      <mu2>${shell_mu}</mu2>
+    </gazebo>
+  </xacro:macro>
+  <!-- CAD shells: axis at x 45.45, z 45.45 mm; rim at y 45.66 mm, pole at y 0.66 mm -->
+  <xacro:shell name="left" side="1" mesh_rpy="0 0 ${pi}" mesh_xyz="0.04545 0.04566 -0.04545"/>
+  <xacro:shell name="right" side="-1" mesh_rpy="0 0 0" mesh_xyz="-0.04545 -0.04566 -0.04545"/>
+
+  <joint name="thermal_joint" type="fixed">
+    <parent link="base_link"/>
+    <child link="thermal_link"/>
+    <origin xyz="${thermal_xyz}" rpy="${thermal_rpy}"/>
+  </joint>
+  <link name="thermal_link"/>
+
+  <joint name="camera_joint" type="fixed">
+    <parent link="base_link"/>
+    <child link="camera_link"/>
+    <origin xyz="${rgb_xyz}" rpy="${rgb_rpy}"/>
+  </joint>
+  <link name="camera_link"/>
+
+  <joint name="imu_joint" type="fixed">
+    <parent link="base_link"/>
+    <child link="imu_link"/>
+    <origin xyz="${imu_xyz}" rpy="${imu_rpy}"/>
+  </joint>
+  <link name="imu_link"/>
+
+  <gazebo>
+    <plugin filename="gz-sim-diff-drive-system" name="gz::sim::systems::DiffDrive">
+      <left_joint>left_wheel_joint</left_joint>
+      <right_joint>right_wheel_joint</right_joint>
+      <wheel_separation>${rolling_gap}</wheel_separation>
+      <wheel_radius>${shell_radius}</wheel_radius>
+      <max_linear_velocity>${max_speed}</max_linear_velocity>
+      <max_linear_acceleration>${max_accel}</max_linear_acceleration>
+      <max_angular_velocity>${max_turn_rate}</max_angular_velocity>
+      <max_angular_acceleration>${max_turn_accel}</max_angular_acceleration>
+      <topic>/cmd_vel</topic>
+      <odom_topic>/odom</odom_topic>
+      <odom_publish_frequency>30</odom_publish_frequency>
+      <frame_id>odom</frame_id>
+      <child_frame_id>base_link</child_frame_id>
+      <!-- not bridged: only the EKF publishes odom -> base_link -->
+      <tf_topic>/model/sphere_scout/tf</tf_topic>
+    </plugin>
+    <!-- one controller per shell on the same topic: one command moves both. Velocity mode, so
+         the shells' sideways ground friction can't stall them. -->
+    <xacro:macro name="shell_controller" params="name">
+      <plugin filename="gz-sim-joint-position-controller-system"
+              name="gz::sim::systems::JointPositionController">
+        <joint_name>${name}_shell_joint</joint_name>
+        <topic>/shell_cmd</topic>
+        <use_velocity_commands>true</use_velocity_commands>
+        <p_gain>5</p_gain>
+        <cmd_max>0.05</cmd_max>
+        <cmd_min>-0.05</cmd_min>
+      </plugin>
+    </xacro:macro>
+    <xacro:shell_controller name="left"/>
+    <xacro:shell_controller name="right"/>
+    <plugin filename="gz-sim-joint-state-publisher-system"
+            name="gz::sim::systems::JointStatePublisher">
+      <topic>/joint_states</topic>
+      <update_rate>50</update_rate>
+    </plugin>
+  </gazebo>
+
+  <gazebo reference="thermal_link">
+    <sensor name="thermal_camera" type="thermal">
+      <gz_frame_id>thermal_link</gz_frame_id>
+      <topic>/thermal/image_raw</topic>
+      <update_rate>8</update_rate>
+      <always_on>true</always_on>
+      <camera>
+        <horizontal_fov>0.96</horizontal_fov>  <!-- 55 deg, MLX90640, across the shell gap -->
+        <image><width>32</width><height>24</height><format>L16</format></image>
+        <!-- near clip under the 14.5 mm to the shell rims, so the shells can block the view -->
+        <clip><near>0.01</near><far>20</far></clip>
+      </camera>
+      <plugin filename="gz-sim-thermal-sensor-system" name="gz::sim::systems::ThermalSensor">
+        <resolution>0.01</resolution>  <!-- kelvin per pixel count -->
+      </plugin>
+    </sensor>
+  </gazebo>
+
+  <!-- RGB feed. The OV2640 gives JPEG; in simulation gazebo_world.launch.py compresses this raw
+       image to /camera/image_raw/compressed the same way. Dark inside voids: it has no light. -->
+  <gazebo reference="camera_link">
+    <sensor name="rgb_camera" type="camera">
+      <gz_frame_id>camera_link</gz_frame_id>
+      <topic>/camera/image_raw</topic>
+      <update_rate>${rgb_rate}</update_rate>
+      <always_on>true</always_on>
+      <camera>
+        <horizontal_fov>${rgb_hfov}</horizontal_fov>
+        <image><width>${rgb_width}</width><height>${rgb_height}</height><format>R8G8B8</format></image>
+        <clip><near>0.01</near><far>50</far></clip>
+        <noise type="gaussian"><mean>0</mean><stddev>0.007</stddev></noise>
+      </camera>
+    </sensor>
+  </gazebo>
+
+  <xacro:macro name="noise_xyz" params="stddev">
+    <x><noise type="gaussian"><mean>0</mean><stddev>${stddev}</stddev></noise></x>
+    <y><noise type="gaussian"><mean>0</mean><stddev>${stddev}</stddev></noise></y>
+    <z><noise type="gaussian"><mean>0</mean><stddev>${stddev}</stddev></noise></z>
+  </xacro:macro>
+  <gazebo reference="imu_link">
+    <sensor name="imu" type="imu">
+      <gz_frame_id>imu_link</gz_frame_id>
+      <topic>/imu/data</topic>
+      <update_rate>100</update_rate>
+      <always_on>true</always_on>
+      <imu>
+        <angular_velocity><xacro:noise_xyz stddev="${gyro_noise}"/></angular_velocity>
+        <linear_acceleration><xacro:noise_xyz stddev="${accel_noise}"/></linear_acceleration>
+      </imu>
+    </sensor>
+  </gazebo>
 </robot>

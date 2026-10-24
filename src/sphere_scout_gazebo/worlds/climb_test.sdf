@@ -1,0 +1,97 @@
+<?xml version="1.0"?>
+<!--
+  climb_test.sdf: a course for measuring what the robot can drive up.
+  Each obstacle sits in its own 0.6 m lane along y, with its front edge at x = 1.0:
+    ramps 3 deg, 6 deg, 9 deg, 12 deg, 15 deg (1.5 m long) in lanes y = 0 to 2.4
+    steps 3 mm, 6 mm, 10 mm, 15 mm, 20 mm (0.5 m deep) in lanes y = 3.0 to 5.4
+  Concrete friction (mu 0.9), flat ground elsewhere.
+  ros2 launch sphere_scout_bringup gazebo_world.launch.py world:=climb_test.sdf x:=0.5 y:=0 z:=0.06
+-->
+<sdf version="1.9">
+  <world name="climb_test">
+    <physics name="1ms" type="ignored">
+      <max_step_size>0.001</max_step_size>
+      <real_time_factor>1.0</real_time_factor>
+    </physics>
+    <plugin filename="gz-sim-physics-system" name="gz::sim::systems::Physics"/>
+    <plugin filename="gz-sim-user-commands-system" name="gz::sim::systems::UserCommands"/>
+    <plugin filename="gz-sim-scene-broadcaster-system" name="gz::sim::systems::SceneBroadcaster"/>
+    <plugin filename="gz-sim-sensors-system" name="gz::sim::systems::Sensors">
+      <render_engine>ogre2</render_engine>
+    </plugin>
+    <plugin filename="gz-sim-imu-system" name="gz::sim::systems::Imu"/>
+    <atmosphere type="adiabatic"><temperature>293.15</temperature></atmosphere>
+    <scene><ambient>0.4 0.4 0.4 1</ambient><background>0.7 0.75 0.8 1</background><shadows>true</shadows></scene>
+    <light type="directional" name="sun">
+      <cast_shadows>true</cast_shadows><pose>0 0 10 0 0 0</pose>
+      <diffuse>0.9 0.9 0.85 1</diffuse><specular>0.2 0.2 0.2 1</specular>
+      <direction>-0.4 0.3 -0.85</direction>
+    </light>
+    <model name="ground_plane"><static>true</static>
+      <link name="link">
+        <collision name="collision"><geometry><plane><normal>0 0 1</normal><size>50 50</size></plane></geometry><surface><friction><ode><mu>0.9</mu><mu2>0.9</mu2></ode></friction></surface></collision>
+        <visual name="visual"><geometry><plane><normal>0 0 1</normal><size>50 50</size></plane></geometry>
+          <material><ambient>0.45 0.43 0.4 1</ambient><diffuse>0.45 0.43 0.4 1</diffuse></material></visual>
+      </link></model>
+    <model name="ramp_3deg"><static>true</static>
+      <pose>1.7516 0.00 -0.0107 0 -0.05236 0</pose>
+      <link name="link">
+        <collision name="c"><geometry><box><size>1.5 0.4 0.1</size></box></geometry><surface><friction><ode><mu>0.9</mu><mu2>0.9</mu2></ode></friction></surface></collision>
+        <visual name="v"><geometry><box><size>1.5 0.4 0.1</size></box></geometry><material><ambient>0.55 0.55 0.58 1</ambient><diffuse>0.55 0.55 0.58 1</diffuse></material></visual>
+      </link></model>
+    <model name="ramp_6deg"><static>true</static>
+      <pose>1.7511 0.60 0.0287 0 -0.10472 0</pose>
+      <link name="link">
+        <collision name="c"><geometry><box><size>1.5 0.4 0.1</size></box></geometry><surface><friction><ode><mu>0.9</mu><mu2>0.9</mu2></ode></friction></surface></collision>
+        <visual name="v"><geometry><box><size>1.5 0.4 0.1</size></box></geometry><material><ambient>0.55 0.55 0.58 1</ambient><diffuse>0.55 0.55 0.58 1</diffuse></material></visual>
+      </link></model>
+    <model name="ramp_9deg"><static>true</static>
+      <pose>1.7486 1.20 0.0679 0 -0.15708 0</pose>
+      <link name="link">
+        <collision name="c"><geometry><box><size>1.5 0.4 0.1</size></box></geometry><surface><friction><ode><mu>0.9</mu><mu2>0.9</mu2></ode></friction></surface></collision>
+        <visual name="v"><geometry><box><size>1.5 0.4 0.1</size></box></geometry><material><ambient>0.55 0.55 0.58 1</ambient><diffuse>0.55 0.55 0.58 1</diffuse></material></visual>
+      </link></model>
+    <model name="ramp_12deg"><static>true</static>
+      <pose>1.7440 1.80 0.1070 0 -0.20944 0</pose>
+      <link name="link">
+        <collision name="c"><geometry><box><size>1.5 0.4 0.1</size></box></geometry><surface><friction><ode><mu>0.9</mu><mu2>0.9</mu2></ode></friction></surface></collision>
+        <visual name="v"><geometry><box><size>1.5 0.4 0.1</size></box></geometry><material><ambient>0.55 0.55 0.58 1</ambient><diffuse>0.55 0.55 0.58 1</diffuse></material></visual>
+      </link></model>
+    <model name="ramp_15deg"><static>true</static>
+      <pose>1.7374 2.40 0.1458 0 -0.26180 0</pose>
+      <link name="link">
+        <collision name="c"><geometry><box><size>1.5 0.4 0.1</size></box></geometry><surface><friction><ode><mu>0.9</mu><mu2>0.9</mu2></ode></friction></surface></collision>
+        <visual name="v"><geometry><box><size>1.5 0.4 0.1</size></box></geometry><material><ambient>0.55 0.55 0.58 1</ambient><diffuse>0.55 0.55 0.58 1</diffuse></material></visual>
+      </link></model>
+    <model name="step_3mm"><static>true</static>
+      <pose>1.250 3.00 0.0015 0 0 0</pose>
+      <link name="link">
+        <collision name="c"><geometry><box><size>0.5 0.4 0.003</size></box></geometry><surface><friction><ode><mu>0.9</mu><mu2>0.9</mu2></ode></friction></surface></collision>
+        <visual name="v"><geometry><box><size>0.5 0.4 0.003</size></box></geometry><material><ambient>0.55 0.55 0.58 1</ambient><diffuse>0.55 0.55 0.58 1</diffuse></material></visual>
+      </link></model>
+    <model name="step_6mm"><static>true</static>
+      <pose>1.250 3.60 0.0030 0 0 0</pose>
+      <link name="link">
+        <collision name="c"><geometry><box><size>0.5 0.4 0.006</size></box></geometry><surface><friction><ode><mu>0.9</mu><mu2>0.9</mu2></ode></friction></surface></collision>
+        <visual name="v"><geometry><box><size>0.5 0.4 0.006</size></box></geometry><material><ambient>0.55 0.55 0.58 1</ambient><diffuse>0.55 0.55 0.58 1</diffuse></material></visual>
+      </link></model>
+    <model name="step_10mm"><static>true</static>
+      <pose>1.250 4.20 0.0050 0 0 0</pose>
+      <link name="link">
+        <collision name="c"><geometry><box><size>0.5 0.4 0.01</size></box></geometry><surface><friction><ode><mu>0.9</mu><mu2>0.9</mu2></ode></friction></surface></collision>
+        <visual name="v"><geometry><box><size>0.5 0.4 0.01</size></box></geometry><material><ambient>0.55 0.55 0.58 1</ambient><diffuse>0.55 0.55 0.58 1</diffuse></material></visual>
+      </link></model>
+    <model name="step_15mm"><static>true</static>
+      <pose>1.250 4.80 0.0075 0 0 0</pose>
+      <link name="link">
+        <collision name="c"><geometry><box><size>0.5 0.4 0.015</size></box></geometry><surface><friction><ode><mu>0.9</mu><mu2>0.9</mu2></ode></friction></surface></collision>
+        <visual name="v"><geometry><box><size>0.5 0.4 0.015</size></box></geometry><material><ambient>0.55 0.55 0.58 1</ambient><diffuse>0.55 0.55 0.58 1</diffuse></material></visual>
+      </link></model>
+    <model name="step_20mm"><static>true</static>
+      <pose>1.250 5.40 0.0100 0 0 0</pose>
+      <link name="link">
+        <collision name="c"><geometry><box><size>0.5 0.4 0.02</size></box></geometry><surface><friction><ode><mu>0.9</mu><mu2>0.9</mu2></ode></friction></surface></collision>
+        <visual name="v"><geometry><box><size>0.5 0.4 0.02</size></box></geometry><material><ambient>0.55 0.55 0.58 1</ambient><diffuse>0.55 0.55 0.58 1</diffuse></material></visual>
+      </link></model>
+  </world>
+</sdf>

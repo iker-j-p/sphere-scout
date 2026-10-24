@@ -1,7 +1,8 @@
 """Convert the apartment FBX into Gazebo meshes.
 
-Writes two files into the meshes directory:
-  apartment.glb            visual mesh, textures embedded
+Writes into the meshes directory:
+  visual_<group>.glb       visual meshes, textures embedded, one file per thermal group
+                           (THERMAL_GROUPS) so model.sdf can give each its own temperature
   apartment_collision.glb  physics mesh: structural parts merged, coplanar faces
                            dissolved (surface unchanged), no materials
 
@@ -28,6 +29,16 @@ from mathutils.bvhtree import BVHTree
 
 # Parts the robot can pass through or will never touch; left out of the collision mesh.
 COLLISION_SKIP = ("Glass", "Label", "Copper", "Water", "Fabric")
+# Visual meshes grouped by how they behave in a thermal image. FBX objects are named
+# Apartment_<material>; anything not listed goes in "other".
+THERMAL_GROUPS = {
+    "brick": ("Brick", "BrickCore"),
+    "concrete": ("Concrete",),
+    "finish": ("Plaster", "Paint", "Ivory"),
+    "metal": ("Steel", "HA_Copper", "HA_Rust", "HA_Paint", "HA_Red"),
+    "wood": ("Wood",),
+    "glass": ("Glass",),
+}
 # Merge coplanar faces within this angle (keeps walls and floors exact). There is no
 # further edge-collapse decimation: on this model it merges the top and bottom of thin
 # floor slabs and leaves holes the robot falls through, at any triangle budget tried.
@@ -104,15 +115,27 @@ for img in bpy.data.images:
     else:
         print(f"WARNING: texture {name} not found")
 
-visual_path = os.path.join(meshes_dir, "apartment.glb")
-bpy.ops.export_scene.gltf(
-    filepath=visual_path,
-    export_format="GLB",
-    export_apply=True,
-    export_yup=False,
-    export_image_format="AUTO",
-)
-print(f"wrote {visual_path} ({os.path.getsize(visual_path) / 1e6:.1f} MB)")
+def thermal_group(obj):
+    material = obj.name.removeprefix("Apartment_").split(".")[0]
+    return next((g for g, names in THERMAL_GROUPS.items() if material in names), "other")
+
+
+meshes = [o for o in bpy.data.objects if o.type == "MESH"]
+for group in list(THERMAL_GROUPS) + ["other"]:
+    members = [o for o in meshes if thermal_group(o) == group]
+    for o in bpy.data.objects:
+        o.select_set(o in members)
+    visual_path = os.path.join(meshes_dir, f"visual_{group}.glb")
+    bpy.ops.export_scene.gltf(
+        filepath=visual_path,
+        export_format="GLB",
+        use_selection=True,
+        export_apply=True,
+        export_yup=False,
+        export_image_format="AUTO",
+    )
+    print(f"wrote {visual_path} ({os.path.getsize(visual_path) / 1e6:.1f} MB): "
+          + ", ".join(o.name.removeprefix("Apartment_") for o in members))
 
 # --- collision mesh ---
 parts = [o for o in bpy.data.objects

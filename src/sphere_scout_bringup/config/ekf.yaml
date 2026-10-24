@@ -1,9 +1,30 @@
 # ekf.yaml: robot_localization ekf_node config.
-# Owner: TODO(kickoff)
 #
-# TODO:
-#   use_sim_time: true
-#   frequency: 30, two_d_mode: false
-#   world_frame: odom, odom_frame: odom, base_link_frame: base_link
-#   odom0: /odom      fuse vx, vy, vz
-#   imu0:  /imu/data  fuse roll, pitch, vroll, vpitch, vyaw   (no absolute yaw)
+# Wheel odometry supplies velocity; the IMU supplies roll, pitch and angular rates. Yaw is not
+# fused as absolute: the MPU-6050 has no magnetometer, so heading comes from the gyro. This also
+# keeps heading right when the shells are open and the real track is wider than wheel_separation.
+
+ekf_filter_node:
+  ros__parameters:
+    use_sim_time: true
+    frequency: 30.0
+    two_d_mode: false          # rubble is not flat
+    publish_tf: true
+    world_frame: odom          # odom origin = spawn point at the entry wall
+    odom_frame: odom
+    base_link_frame: base_link
+
+    # config order: [x, y, z, roll, pitch, yaw, vx, vy, vz, vroll, vpitch, vyaw, ax, ay, az]
+    odom0: /odom
+    odom0_config: [false, false, false,
+                   false, false, false,
+                   true,  true,  true,
+                   false, false, false,
+                   false, false, false]
+
+    imu0: /imu/data
+    imu0_config: [false, false, false,
+                  true,  true,  false,
+                  false, false, false,
+                  true,  true,  true,
+                  false, false, false]

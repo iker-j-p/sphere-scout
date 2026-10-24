@@ -224,6 +224,22 @@
           <property type="string" key="state">docked</property>
         </gz-gui>
       </plugin>
+
+      <!-- Live colour view of the robot's 32 x 24 thermal camera on a fixed 5..40 C scale,
+           made by thermal_celsius_node (perception.launch.py) and bridged back into Gazebo.
+           Empty until that node runs. -->
+      <plugin filename="ImageDisplay" name="Thermal camera">
+        <gz-gui>
+          <title>Thermal camera, 5-40 C</title>
+          <property key="state" type="string">floating</property>
+          <property type="double" key="x">10</property>
+          <property type="double" key="y">60</property>
+          <property type="double" key="width">380</property>
+          <property type="double" key="height">350</property>
+        </gz-gui>
+        <topic>/thermal/image_color</topic>
+        <topic_picker>false</topic_picker>
+      </plugin>
     </gui>
 
     <physics name="1ms" type="ignored">
@@ -238,9 +254,10 @@
     </plugin>
     <plugin filename="gz-sim-imu-system" name="gz::sim::systems::Imu"/>
 
-    <!-- ambient 20 C for the thermal camera -->
+    <!-- night: air 15 C. The thermal camera reads anything without its own temperature
+         (the sky, the robot) as air. Building temperatures are in models/apartment. -->
     <atmosphere type="adiabatic">
-      <temperature>293.15</temperature>
+      <temperature>288.15</temperature>
     </atmosphere>
 
     <scene>
@@ -269,6 +286,10 @@
             <ambient>0.45 0.43 0.4 1</ambient>
             <diffuse>0.45 0.43 0.4 1</diffuse>
           </material>
+          <!-- night ground, cooler than the air -->
+          <plugin filename="gz-sim-thermal-system" name="gz::sim::systems::Thermal">
+            <temperature>285.15</temperature>
+          </plugin>
         </visual>
       </link>
     </model>
@@ -276,6 +297,20 @@
     <include>
       <uri>model://apartment</uri>
       <pose>0 0 0 0 0 0</pose>
+    </include>
+
+    <!-- Survivor: Rescue Randy from Gazebo Fuel (downloaded on first run, then cached). Its
+         Thermal system uses a heat-signature texture peaking at 310 K (37 C) on the skin, with
+         cooler clothing.
+         Trapped at the south edge of the collapse: lying on its back, legs pinned under the
+         fallen ground floor (feet at 14.34, 1.04), head and chest out in a low void under the
+         rubble (head at 13.17, -0.13). That void runs west along the south wall to a mouth at
+         about (8.7, -1.1); no standing rescuer outside can see in, and the robot gets a clear
+         view only from inside. Keep config/ground_truth.yaml in step with this pose. -->
+    <include>
+      <name>survivor</name>
+      <uri>https://fuel.gazebosim.org/1.0/OpenRobotics/models/Rescue Randy</uri>
+      <pose>14.34 1.04 0.179 1.5708 0 -0.7854</pose>
     </include>
   </world>
 </sdf>
