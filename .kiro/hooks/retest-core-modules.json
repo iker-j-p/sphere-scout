@@ -1,0 +1,15 @@
+{
+  "version": "v1",
+  "hooks": [
+    {
+      "name": "Re-run unit tests after core module changes",
+      "trigger": "PostFileSave",
+      "description": "Runs the Python unit tests only when one of the tested core modules or bridge.py is saved.",
+      "matcher": "sphere_scout_ai/(triangulation|thermal_render|msg_utils|model_client)\\.py$|tools/xr_viewer/bridge\\.py$",
+      "action": {
+        "type": "agent",
+        "prompt": "A tested core module was just saved. Run the unit tests from the build-and-test steering file (the three sphere_scout_ai test scripts, plus tools/xr_viewer/test/test_bridge.py if bridge.py changed), with ROS sourced. Report only failures or a one-line pass. If a test fails, find the cause; do not edit triangulation.py or thermal_render.py to make a test pass without asking first."
+      }
+    }
+  ]
+}

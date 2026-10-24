@@ -1,0 +1,15 @@
+{
+  "version": "v1",
+  "hooks": [
+    {
+      "name": "Rebuild after package metadata changes",
+      "trigger": "PostFileSave",
+      "description": "Builds only the affected package when its setup.py, setup.cfg, package.xml or CMakeLists.txt is saved.",
+      "matcher": "src/[^/]+/(setup\\.py|setup\\.cfg|package\\.xml|CMakeLists\\.txt)$",
+      "action": {
+        "type": "agent",
+        "prompt": "A package build file (setup.py, setup.cfg, package.xml or CMakeLists.txt) was just saved. Run `colcon build --symlink-install --packages-select <that package>` with ROS sourced and report errors only, or a one-line success. If a console script was added or removed, confirm it appears under install/<package>/lib/<package>/."
+      }
+    }
+  ]
+}

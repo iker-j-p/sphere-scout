@@ -3,8 +3,11 @@
 State as of 2026-10-24, written so a new chat can continue without the old one.
 Repo root = colcon workspace = `/home/ikerj/Sphere-Scout/sphere-scout` (WSL2 Ubuntu 24.04, ROS 2 Jazzy).
 `AGENTS.md` is the source of truth for the stack and rules; this file records what was built on top of it.
-Nothing from this session is committed (changes are staged). Rebuild after pulling:
-`colcon build --symlink-install` (a new console script, `thermal_viewer_node`, needs it).
+Git state when this was written: the work is in commit `68cc2be` on branch `position_webapp` (pushed). That
+commit is MISSING `tools/xr_viewer/web/vendor/three/build/three.module.js` and `three.core.js` (the colcon
+`build/` rule in `.gitignore` swallowed them). The fix (a `.gitignore` exception plus those two files) and this
+handoff were staged afterwards but NOT committed; commit them or the web view cannot load on a fresh clone.
+Rebuild after pulling: `colcon build --symlink-install` (a new console script, `thermal_viewer_node`, needs it).
 
 ## Paste this at the start of the new chat
 

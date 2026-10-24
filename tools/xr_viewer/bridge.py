@@ -10,10 +10,10 @@ nothing. It only listens and serves:
               /thermal/view       (sensor_msgs/Image rgb8, from thermal_viewer_node) existing topic
   TF          odom -> base_link   (EKF)                                          existing frame
   serves      GET /               the web app in tools/xr_viewer/web/
-              GET /config.json    {spawn_pose, frame, mesh}  (spawn_pose is read from
+              GET /config.json    {spawn_pose, frame, meshes}  (spawn_pose is read from
                                   target_localizer.yaml, the single source of truth, so the
                                   viewer's world<->odom alignment cannot drift from the localizer)
-              GET /models/apartment.glb   the Gazebo visual mesh (Z-up, same file Gazebo loads)
+              GET /models/visual_<group>.glb   the Gazebo visual meshes (Z-up, same files Gazebo loads)
               GET /events         server-sent events: {"type":"markers",...} at the localizer
                                   rate, {"type":"robot","p":[x,y,z],"q":[x,y,z,w]} at 20 Hz,
                                   {"type":"thermal","jpg":<base64 JPEG>,"w":..,"h":..,"t":<send time>} at the
@@ -65,7 +65,9 @@ from visualization_msgs.msg import Marker, MarkerArray
 HERE = Path(__file__).resolve().parent
 REPO = HERE.parents[1]
 WEB = HERE / 'web'
-MESH = REPO / 'src/sphere_scout_gazebo/models/apartment/meshes/apartment.glb'
+MESH_DIR = REPO / 'src/sphere_scout_gazebo/models/apartment/meshes'
+MESH_GLOB = 'visual_*.glb'          # one file per thermal group (tools/export_apartment.py)
+mesh_names = []                     # filled in main() from MESH_DIR; the only files served
 LOCALIZER_YAML = REPO / 'src/sphere_scout_bringup/config/target_localizer.yaml'
 CERT_DIR = HERE / '.cert'
 FRAME = 'odom'
@@ -247,8 +249,11 @@ def make_handler(hub, config):
                 return self._events()
             if route == '/config.json':
                 return self._send(200, config_bytes, 'application/json')
-            if route == '/models/apartment.glb':
-                return self._file(MESH, 'max-age=300')
+            if route.startswith('/models/') and route.endswith('.glb'):
+                part = MESH_DIR / route[len('/models/'):]
+                if part.parent == MESH_DIR and part.name in mesh_names:
+                    return self._file(part, 'max-age=300')
+                return self._send(404, b'not found', 'text/plain')
             rel = 'index.html' if route in ('', '/') else route.lstrip('/')
             target = (WEB / rel).resolve()
             if WEB.resolve() not in target.parents or not target.is_file():
@@ -328,9 +333,11 @@ def main():
                     help='override spawn_pose from target_localizer.yaml')
     args, ros_args = ap.parse_known_args()
 
-    if not MESH.is_file():
-        sys.exit(f'mesh not found: {MESH}')
-    config = {'spawn_pose': read_spawn(args.spawn), 'frame': FRAME, 'mesh': '/models/apartment.glb'}
+    mesh_names.extend(sorted(p.name for p in MESH_DIR.glob(MESH_GLOB)))
+    if not mesh_names:
+        sys.exit(f'no {MESH_GLOB} meshes in {MESH_DIR}')
+    config = {'spawn_pose': read_spawn(args.spawn), 'frame': FRAME,
+              'meshes': [f'/models/{n}' for n in mesh_names]}
 
     hub = Hub()
     server = ThreadingHTTPServer((args.host, args.port), make_handler(hub, config))

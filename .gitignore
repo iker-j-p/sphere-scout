@@ -14,3 +14,6 @@ ss_venv/
 tools/xr_viewer/.cert/
 # vendored three.js lives in a folder named build/; keep it (the rule above is for colcon)
 !tools/xr_viewer/web/vendor/three/build/
+
+# external clones (the human-detection model repo and its venv); not part of this repo
+external/

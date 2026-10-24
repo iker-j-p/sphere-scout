@@ -47,7 +47,7 @@ const controls = new OrbitControls(camera, renderer.domElement);
 controls.enableDamping = true;
 
 // -------------------------------------------------------------------------- config
-let config = { spawn_pose: [0, 0, 0, 0], mesh: '/models/apartment.glb' };
+let config = { spawn_pose: [0, 0, 0, 0], meshes: [] };
 let floorOdomZ = 0;                        // world z = 0 (ground plane) expressed in odom z
 let buildingBox = null;                    // three-space bounds of the mesh
 
@@ -57,7 +57,12 @@ function applySpawn(spawn) { floorOdomZ = placeWorld(spawn); }
 const glassMaterials = [];
 function loadBuilding() {
   const info = $('status');
-  new GLTFLoader().load(config.mesh, (gltf) => {
+  const building = new THREE.Group();          // one glb per thermal group, loaded in parallel
+  const loaded = new Array(config.meshes.length).fill(0);
+  const totals = new Array(config.meshes.length).fill(0);
+  let pending = config.meshes.length;
+  const fail = (err) => { $('warn').style.display = 'block'; $('warn').textContent = 'could not load the building mesh: ' + err; };
+  config.meshes.forEach((url, i) => new GLTFLoader().load(url, (gltf) => {
     gltf.scene.traverse((o) => {
       if (!o.isMesh) return;
       const mats = Array.isArray(o.material) ? o.material : [o.material];
@@ -69,17 +74,22 @@ function loadBuilding() {
       });
       if (o.material.length === 1) o.material = o.material[0];
     });
-    worldGroup.add(gltf.scene);
+    building.add(gltf.scene);
+    if (--pending > 0) return;
+    worldGroup.add(building);
     const grid = new THREE.GridHelper(60, 60, 0x5c6b7a, 0x33404c);   // 1 m cells at world z = 0
     grid.rotation.x = Math.PI / 2;
     worldGroup.add(grid);
     scene.updateMatrixWorld(true);
-    buildingBox = new THREE.Box3().setFromObject(gltf.scene);
+    buildingBox = new THREE.Box3().setFromObject(building);
     frameDesktopCamera();
     if (info.textContent.startsWith('loading')) info.textContent = 'waiting for /survivor/markers...';
   }, (e) => {
-    if (e.lengthComputable) $('status').textContent = `loading building ${Math.round(100 * e.loaded / e.total)}%`;
-  }, (err) => { $('warn').style.display = 'block'; $('warn').textContent = 'could not load the building mesh: ' + err; });
+    if (!e.lengthComputable) return;
+    loaded[i] = e.loaded; totals[i] = e.total;
+    const total = totals.reduce((a, b) => a + b, 0);
+    if (total > 0) $('status').textContent = `loading building ${Math.round(100 * loaded.reduce((a, b) => a + b, 0) / total)}%`;
+  }, fail));
 }
 
 function frameDesktopCamera() {

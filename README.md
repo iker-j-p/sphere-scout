@@ -32,6 +32,14 @@ The firmware (`firmware/sphere_scout_firmware`, `COLCON_IGNORE`d) is built separ
 
 ## Run
 
+One terminal, everything (model service, Gazebo, state machine, perception, localizer + viewer, browser view, then keyboard teleop in that terminal):
+
+```bash
+tools/run_all.sh                 # --headless: no Gazebo GUI, --rviz: also RViz, --no-bridge, --no-teleop
+```
+
+Logs are in `log/run_all/`; Ctrl+C stops what it started. The numbered steps below run the same pieces one by one.
+
 ```bash
 # 1. Simulation: Gazebo, robot, bridge, EKF (headless:=true for no GUI; rviz:=true once
 #    mission_control.rviz is saved). The robot is the team's 9 cm sphere (sphere.urdf.xacro);
@@ -39,8 +47,10 @@ The firmware (`firmware/sphere_scout_firmware`, `COLCON_IGNORE`d) is built separ
 #    a course of ramps and steps.
 ros2 launch sphere_scout_bringup gazebo_world.launch.py
 
-# 2. Perception (for now: the thermal camera in degC on /thermal/celsius, and the colour
-#    5-40 degC view that the Gazebo "Thermal camera" panel shows)
+# 2. Perception: the thermal camera in degC on /thermal/celsius, the colour 5-40 degC view for
+#    the Gazebo "Thermal camera" panel, and /detected_target from the human-detection model.
+#    The model is a separate service (external/thermal_rescue_ai_model, own venv); start it first:
+tools/run_model_server.sh                 # port 8766, 127.0.0.1 only, no authentication
 ros2 launch sphere_scout_ai perception.launch.py
 #    Print one 32 x 24 frame as a grid of degC
 ros2 run sphere_scout_ai print_thermal
@@ -88,6 +98,8 @@ ros2 service call /mission/scan std_srvs/srv/Trigger
 | `/mission/scan` | std_srvs/srv/Trigger (service) | motor_state_machine (server) | operator |
 | `/target_localizer_node/reset` | std_srvs/srv/Trigger (service) | target_localizer_node (server) | operator |
 
+The model service behind `/detected_target` is set up once: `git clone https://github.com/andrew2719/thermal_rescue_ai_model external/thermal_rescue_ai_model`, `touch external/COLCON_IGNORE`, `python3 -m venv external/venv`, `external/venv/bin/pip install torch --index-url https://download.pytorch.org/whl/cpu`, `external/venv/bin/pip install -r external/thermal_rescue_ai_model/requirements.txt` (versions used: `external/requirements-lock.txt`). Its `models/bouazizi_binary_best.pt` ships in the clone. The detector's parameters (`server_url`, `request_timeout_s`, `pixel_convention`, `resolution`) are in `src/sphere_scout_ai/config/thermal_detector.yaml`.
+
 `/thermal/view` and `/target_localizer_node/reset` are new. The localizer is a continuous passive estimator (no coupling to `/mission/state`, `/cmd_vel`, `/odom`); `/survivor/position` carries triangulated points only. Parameters: `src/sphere_scout_bringup/config/target_localizer.yaml` and `thermal_viewer.yaml` (they replace the stub's `width`, `height`, `min_ray_angle_deg`, `ground_truth_file`). `pixel_convention` must match across detector, localizer and viewer.
 
 Only the EKF publishes the `odom → base_link` TF; DiffDrive's TF is not bridged.
@@ -110,9 +122,8 @@ Values to decide at kickoff. No physical value is invented in this repo.
 | Placeholder | File |
 |---|---|
 | robot values still assumed: `shell_extension_max` (GS-1502 stroke), `ballast_mass`, `slider_mass`, IMU noise, drive limits (the rest come from the CAD and the mass calculator) | `src/sphere_scout_description/urdf/params.xacro` |
-| `target_height_m`, `target_height_sigma_m` (enable the one-view PROVISIONAL estimate), `ground_truth_world`, `spawn_pose` | `src/sphere_scout_bringup/config/target_localizer.yaml` (commented out / default until Mech 2 gives values) |
+| `target_height_m`, `target_height_sigma_m` (enable the one-view PROVISIONAL estimate) | `src/sphere_scout_bringup/config/target_localizer.yaml` (commented out until Mech 2 gives values) |
 | RViz layout `sphere_scout.rviz` (save from the RViz2 GUI: fixed frame `odom`, Image `/thermal/view` Reliable, MarkerArray `/survivor/markers`, TF) | `src/sphere_scout_description/rviz/` |
-| `t_low_c`, `t_high_c`, `min_pixels` defaults | `src/sphere_scout_ai/sphere_scout_ai/thermal_detector_node.py` |
 | MLX90640, MPU-6050, DRV8833 pin numbers | `firmware/sphere_scout_firmware/src/main.cpp` |
 | package owners and maintainers | this README, `AGENTS.md`, every `package.xml` / `setup.py`, file headers |
 

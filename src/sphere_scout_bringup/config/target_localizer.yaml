@@ -40,9 +40,13 @@ target_localizer_node:
     # markers
     ellipsoid_sigma: 2.0
     ray_display_length_m: 8.0
-    # sim ground truth (world frame). spawn_pose = x, y, z, yaw of base_link at spawn.
-    spawn_pose: [0.0, 0.0, 0.0, 0.0]
+    # sim ground truth (world frame). spawn_pose = x, y, z, yaw of base_link at spawn: the
+    # gazebo_world.launch.py defaults (x 5.0, y -2.5, z 0.06, yaw 0), also in
+    # sphere_scout_gazebo/config/ground_truth.yaml. Keep them equal.
+    spawn_pose: [5.0, -2.5, 0.06, 0.0]
+    # Rescue Randy's head, world frame, from sphere_scout_gazebo/config/ground_truth.yaml
+    # (survivor.world.head; = survivor_head_odom 8.17, 2.37, 0.12 in odom). Flat list x1, y1, z1, ...
+    ground_truth_world: [13.17, -0.13, 0.18]
     # UNSET ON PURPOSE until Mech 2 provides them. Do not invent values.
     # target_height_m: 0.0        # enables the one-view PROVISIONAL estimate (needs both)
     # target_height_sigma_m: 0.05
-    # ground_truth_world: [0.0, 0.0, 0.0]   # flat list x1, y1, z1, x2, ...
