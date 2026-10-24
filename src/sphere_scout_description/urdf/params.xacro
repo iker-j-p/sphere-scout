@@ -1,0 +1,18 @@
+<?xml version="1.0"?>
+<!--
+  params.xacro: the ONE place for every robot dimension and mass.
+  Owner: TODO(kickoff)
+
+  TODO(kickoff): define an <xacro:property> for each value below. Values are decided at kickoff;
+  do not invent them. Any placeholder must stay marked TODO(kickoff) and be listed in the README.
+    - shell_radius          (m)
+    - rolling_gap           (m)   distance between the shell rim planes when rolling
+    - shell_extension_max   (m)   travel of each prismatic shell joint
+    - core_mass             (kg)
+    - shell_mass            (kg)  per shell
+    - core_com_offset_z     (m)   core CoM distance BELOW the axle
+    - thermal mount pose    (xyz rpy relative to base_link)
+    - imu mount pose        (xyz rpy relative to base_link)
+-->
+<robot xmlns:xacro="http://www.ros.org/wiki/xacro">
+</robot>

@@ -1,0 +1,10 @@
+# mission_control.rviz: RViz2 config for Mission Control.
+# Owner: TODO(kickoff)
+#
+# TODO: save from RViz2 with:
+#   - Fixed frame: odom
+#   - RobotModel   (description topic /robot_description)
+#   - TF
+#   - Image        (/thermal/image_raw)
+#   - Odometry     (/odometry/filtered)
+#   - MarkerArray  (/survivor/markers)

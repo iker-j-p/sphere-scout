@@ -1,0 +1,33 @@
+<?xml version="1.0"?>
+<!--
+  sphere.urdf.xacro: Sphere-Scout robot model.
+  Owner: TODO(kickoff)
+
+  TODO: include params.xacro; no literal dimensions in this file.
+
+  TODO: link/joint tree
+    base_link                     core; CoM offset below the axle by core_com_offset_z
+    left_shell_joint  (prismatic, along the axle)  -> left_slider
+    left_wheel_joint  (continuous)                  -> left_shell
+    right_shell_joint (prismatic, axis REVERSED so a positive command opens both shells) -> right_slider
+    right_wheel_joint (continuous)                  -> right_shell
+    thermal_joint     (fixed) -> thermal_link       camera faces +X
+    imu_joint         (fixed) -> imu_link
+  TODO: each shell collision = one sphere of radius shell_radius, centered on the axle at the
+        shell's rim plane. Visuals: simple primitives for now.
+  TODO: inertias from standard solid-body formulas using the params; no zero or near-zero values.
+
+  TODO: Gazebo Harmonic blocks (gz-sim-*-system filenames, gz::sim::systems::* names only)
+    - DiffDrive: left/right wheel joints, wheel_separation = rolling_gap, wheel_radius = shell_radius,
+      topic cmd_vel, odom_topic odom, frame_id odom, child_frame_id base_link
+    - JointPositionController x2 (one per prismatic joint), both on topic shell_cmd
+    - JointStatePublisher on topic joint_states
+    - thermal sensor on thermal_link: type thermal, topic thermal/image_raw, update_rate 8,
+      horizontal_fov 0.96, 32 x 24, format L16, clip 0.05 to 20,
+      ThermalSensor system with resolution 0.01
+    - IMU sensor on imu_link: topic imu/data, update_rate 100, always_on, gaussian noise on
+      angular velocity and linear acceleration (stddevs: TODO(kickoff))
+  No ros2_control.
+-->
+<robot name="sphere_scout" xmlns:xacro="http://www.ros.org/wiki/xacro">
+</robot>
