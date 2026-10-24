@@ -33,7 +33,9 @@ The firmware (`firmware/sphere_scout_firmware`, `COLCON_IGNORE`d) is built separ
 ## Run
 
 ```bash
-# 1. Simulation: Gazebo, robot, bridge, EKF, RViz (add headless:=true rviz:=false on WSL without a GPU)
+# 1. Simulation: Gazebo, robot, bridge, EKF (headless:=true for no GUI; rviz:=true once
+#    mission_control.rviz is saved). The robot is the placeholder cube until sphere.urdf.xacro
+#    is ready; switch with model:=sphere.urdf.xacro.
 ros2 launch sphere_scout_bringup gazebo_world.launch.py
 
 # 2. Perception
@@ -42,7 +44,8 @@ ros2 launch sphere_scout_ai perception.launch.py
 # 3. Motor state machine
 ros2 run sphere_scout_control motor_state_machine
 
-# 4. Teleop (into the state machine, not straight to the robot)
+# 4. Teleop (into the state machine, not straight to the robot). Until motor_state_machine is
+#    implemented, drop the remap to drive /cmd_vel directly.
 ros2 run teleop_twist_keyboard teleop_twist_keyboard --ros-args -r cmd_vel:=cmd_vel_teleop
 
 # 5. Trigger a scan

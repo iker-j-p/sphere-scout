@@ -1,13 +1,45 @@
 # bridge.yaml: ros_gz_bridge parameter_bridge config.
-# Owner: TODO(kickoff)
 #
-# TODO: one entry per row (ros_topic_name, gz_topic_name, ros_type_name, gz_type_name, direction)
-#   /clock             <- /clock              rosgraph_msgs/msg/Clock     gz.msgs.Clock     GZ_TO_ROS
-#   /cmd_vel           -> /cmd_vel            geometry_msgs/msg/Twist     gz.msgs.Twist     ROS_TO_GZ
-#   /odom              <- /odom               nav_msgs/msg/Odometry       gz.msgs.Odometry  GZ_TO_ROS
-#   /imu/data          <- /imu/data           sensor_msgs/msg/Imu         gz.msgs.IMU       GZ_TO_ROS
-#   /thermal/image_raw <- /thermal/image_raw  sensor_msgs/msg/Image       gz.msgs.Image     GZ_TO_ROS
-#   /shell/cmd         -> /shell_cmd          std_msgs/msg/Float64        gz.msgs.Double    ROS_TO_GZ
-#   /joint_states      <- /joint_states       sensor_msgs/msg/JointState  gz.msgs.Model     GZ_TO_ROS
-#
-# Do NOT bridge DiffDrive's TF. Only the EKF publishes odom -> base_link.
+# Do NOT bridge DiffDrive's TF (/model/sphere_scout/tf). Only the EKF publishes odom -> base_link.
+
+- ros_topic_name: /clock
+  gz_topic_name: /clock
+  ros_type_name: rosgraph_msgs/msg/Clock
+  gz_type_name: gz.msgs.Clock
+  direction: GZ_TO_ROS
+
+- ros_topic_name: /cmd_vel
+  gz_topic_name: /cmd_vel
+  ros_type_name: geometry_msgs/msg/Twist
+  gz_type_name: gz.msgs.Twist
+  direction: ROS_TO_GZ
+
+- ros_topic_name: /odom
+  gz_topic_name: /odom
+  ros_type_name: nav_msgs/msg/Odometry
+  gz_type_name: gz.msgs.Odometry
+  direction: GZ_TO_ROS
+
+- ros_topic_name: /imu/data
+  gz_topic_name: /imu/data
+  ros_type_name: sensor_msgs/msg/Imu
+  gz_type_name: gz.msgs.IMU
+  direction: GZ_TO_ROS
+
+- ros_topic_name: /thermal/image_raw
+  gz_topic_name: /thermal/image_raw
+  ros_type_name: sensor_msgs/msg/Image
+  gz_type_name: gz.msgs.Image
+  direction: GZ_TO_ROS
+
+- ros_topic_name: /shell/cmd
+  gz_topic_name: /shell_cmd
+  ros_type_name: std_msgs/msg/Float64
+  gz_type_name: gz.msgs.Double
+  direction: ROS_TO_GZ
+
+- ros_topic_name: /joint_states
+  gz_topic_name: /joint_states
+  ros_type_name: sensor_msgs/msg/JointState
+  gz_type_name: gz.msgs.Model
+  direction: GZ_TO_ROS
