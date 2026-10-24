@@ -42,10 +42,9 @@ ros2 launch sphere_scout_bringup gazebo_world.launch.py
 ros2 launch sphere_scout_ai perception.launch.py
 
 # 3. Motor state machine
-ros2 run sphere_scout_control motor_state_machine
+ros2 run sphere_scout_control motor_state_machine --ros-args -p use_sim_time:=true
 
-# 4. Teleop (into the state machine, not straight to the robot). Until motor_state_machine is
-#    implemented, drop the remap to drive /cmd_vel directly.
+# 4. Teleop (into the state machine, not straight to the robot)
 ros2 run teleop_twist_keyboard teleop_twist_keyboard --ros-args -r cmd_vel:=cmd_vel_teleop
 
 # 5. Trigger a scan
@@ -95,12 +94,10 @@ Values to decide at kickoff. No physical value is invented in this repo.
 | `core_mass`, `shell_mass`, `core_com_offset_z` | `src/sphere_scout_description/urdf/params.xacro` |
 | thermal and IMU mount poses | `src/sphere_scout_description/urdf/params.xacro` |
 | IMU noise stddevs (angular velocity, linear acceleration) | `src/sphere_scout_description/urdf/sphere.urdf.xacro` |
-| survivor stand-in pose and size (static box, visual with the Thermal system at 310 K; not in the world yet) | `src/sphere_scout_gazebo/worlds/apartment.sdf` |
-| survivor stand-in pose (must match the world) | `src/sphere_scout_gazebo/config/ground_truth.yaml` |
-| spawn entry pose defaults | `src/sphere_scout_bringup/launch/gazebo_world.launch.py` |
-| `rolling_gap_cmd`, `expanded_cmd`, `scan_step_deg`, `scan_steps`, `scan_hold_s`, `scan_yaw_rate` defaults | `src/sphere_scout_control/sphere_scout_control/motor_state_machine.py` |
 | `t_low_c`, `t_high_c`, `min_pixels` defaults | `src/sphere_scout_ai/sphere_scout_ai/thermal_detector_node.py` |
 | MLX90640, MPU-6050, DRV8833 pin numbers | `firmware/sphere_scout_firmware/src/main.cpp` |
 | package owners and maintainers | this README, `AGENTS.md`, every `package.xml` / `setup.py`, file headers |
 
 Also unresolved: the ESP32-S3 Mini board ID in `firmware/sphere_scout_firmware/platformio.ini` (`TODO: confirm ESP32-S3 Mini board ID`).
+
+Settled since kickoff: the survivor is Rescue Randy from Gazebo Fuel (heat signature peaking at 310 K) lying in the debris outside the south wall (`apartment.sdf`, `ground_truth.yaml`); the robot spawns outside at (5.0, -2.5) (`gazebo_world.launch.py`); the scan defaults are in `motor_state_machine.py`. The first launch downloads Rescue Randy (about 12 MB), so it needs internet once.

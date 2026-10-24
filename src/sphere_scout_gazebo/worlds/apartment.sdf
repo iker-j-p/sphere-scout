@@ -224,6 +224,21 @@
           <property type="string" key="state">docked</property>
         </gz-gui>
       </plugin>
+
+      <!-- Live view of the robot's 32 x 24 thermal camera (Gazebo topic, scaled to its own
+           min..max each frame, so the warmest thing in view shows white) -->
+      <plugin filename="ImageDisplay" name="Thermal camera">
+        <gz-gui>
+          <title>Thermal camera</title>
+          <property key="state" type="string">floating</property>
+          <property type="double" key="x">10</property>
+          <property type="double" key="y">60</property>
+          <property type="double" key="width">380</property>
+          <property type="double" key="height">320</property>
+        </gz-gui>
+        <topic>/thermal/image_raw</topic>
+        <topic_picker>false</topic_picker>
+      </plugin>
     </gui>
 
     <physics name="1ms" type="ignored">
@@ -276,6 +291,16 @@
     <include>
       <uri>model://apartment</uri>
       <pose>0 0 0 0 0 0</pose>
+    </include>
+
+    <!-- Survivor: Rescue Randy from Gazebo Fuel (downloaded on first run, then cached). Its
+         Thermal system uses a heat-signature texture peaking at 310 K (37 C) on the skin, with
+         cooler clothing. Lying on its back at the edge of the spilled debris, feet at
+         (8.55, -3.35), head towards -y. Keep config/ground_truth.yaml in step with this pose. -->
+    <include>
+      <name>survivor</name>
+      <uri>https://fuel.gazebosim.org/1.0/OpenRobotics/models/Rescue Randy</uri>
+      <pose>8.55 -3.35 0.179 1.5708 0 0</pose>
     </include>
   </world>
 </sdf>
