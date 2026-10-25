@@ -1,0 +1,52 @@
+# Parameters for target_localizer_node. (A) in docs/LOCALIZER_SPEC.md = assumption, tune in sim.
+target_localizer_node:
+  ros__parameters:
+    use_sim_time: true
+    # camera model (must match the Gazebo sensor block)
+    image_width: 32
+    image_height: 24
+    hfov_rad: 0.96
+    vfov_rad: 0.0                 # 0 = square pixels; check the SDF
+    pixel_convention: index       # index or edge. Same value in thermal_viewer.yaml. Confirm with the detector.
+    camera_frame: ''              # empty = use the frame_id of the message
+    camera_convention: gz         # gz (x fwd, y left, z up) or optical (z fwd). Check the URDF/SDF.
+    target_frame: odom
+    # views
+    view_radius_m: 0.15           # must exceed stationary pose jitter of odom -> base_link; measure it
+    min_frames_per_view: 4
+    ray_gate_deg: 4.0
+    max_views: 200
+    sigma_theta_rad: 0.01
+    # solve and gates
+    min_baseline_m: 0.5
+    min_parallax_deg: 1.0
+    max_chi2_per_dof: 9.0
+    inlier_sigma: 3.0
+    ransac_pairs: 100
+    max_reject_frac: 0.5
+    max_sigma_view_m: 0.5
+    publish_low_confidence: true
+    publish_rate_hz: 5.0
+    pending_timeout_s: 1.0
+    # optional motion gate for hardware (0 = off). Leave off in sim.
+    max_angular_rate_dps: 0.0
+    max_speed_mps: 0.0
+    motion_dt_s: 0.1
+    # priors (display only)
+    prior_min_elev_deg: 2.0
+    use_size_prior: true
+    target_extent_min_m: 0.3
+    target_extent_max_m: 1.7
+    # markers
+    ellipsoid_sigma: 2.0
+    ray_display_length_m: 8.0
+    # sim ground truth (world frame). spawn_pose = x, y, z, yaw of base_link at spawn: the
+    # gazebo_world.launch.py defaults (x 5.0, y -2.5, z 0.06, yaw 0), also in
+    # sphere_scout_gazebo/config/ground_truth.yaml. Keep them equal.
+    spawn_pose: [5.0, -2.5, 0.06, 0.0]
+    # Rescue Randy's head, world frame, from sphere_scout_gazebo/config/ground_truth.yaml
+    # (survivor.world.head; = survivor_head_odom 8.17, 2.37, 0.12 in odom). Flat list x1, y1, z1, ...
+    ground_truth_world: [13.17, -0.13, 0.18]
+    # UNSET ON PURPOSE until Mech 2 provides them. Do not invent values.
+    # target_height_m: 0.0        # enables the one-view PROVISIONAL estimate (needs both)
+    # target_height_sigma_m: 0.05

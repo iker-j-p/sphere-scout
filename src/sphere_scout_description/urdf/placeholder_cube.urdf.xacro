@@ -1,0 +1,220 @@
+<?xml version="1.0"?>
+<!--
+  placeholder_cube.urdf.xacro: stand-in robot until sphere.urdf.xacro is finished.
+
+  A 6 cm cube (the core) between two 12 cm wheels (the shells), resting on two frictionless
+  caster balls so it stays level. Without them the cube rocks on its wheels like a pendulum
+  after every stop (+-35-50 deg, undamped: Gazebo has no rolling resistance). It has the same
+  interface as the sphere robot, so everything downstream can be built against it now:
+    links   base_link, left_slider, left_shell, right_slider, right_shell, thermal_link, imu_link
+    joints  left_shell_joint / right_shell_joint (prismatic, positive opens both),
+            left_wheel_joint / right_wheel_joint (continuous)
+    topics  /cmd_vel, /odom, /shell_cmd, /joint_states, /thermal/image_raw, /imu/data (Gazebo side)
+
+  Differences from the sphere: flat wheels instead of hemispheres, a 7.8 cm track instead of
+  the 2 cm rolling gap, and the camera's view is never blocked by the shells.
+  All numbers below are placeholder assumptions, not agreed robot values.
+-->
+<robot name="sphere_scout" xmlns:xacro="http://www.ros.org/wiki/xacro">
+
+  <!-- placeholder values -->
+  <xacro:property name="wheel_radius" value="0.06"/>
+  <xacro:property name="wheel_width" value="0.01"/>
+  <xacro:property name="wheel_mass" value="0.04"/>
+  <xacro:property name="cube_size" value="0.06"/>
+  <xacro:property name="cube_z" value="-0.01"/>          <!-- cube centre below the axle -->
+  <xacro:property name="core_mass" value="0.22"/>
+  <xacro:property name="core_com_z" value="-0.025"/>     <!-- ballast keeps the CoM low -->
+  <xacro:property name="caster_radius" value="0.01"/>
+  <xacro:property name="caster_x" value="0.02"/>         <!-- front and back of the cube -->
+  <xacro:property name="slider_mass" value="0.01"/>
+  <xacro:property name="shell_extension_max" value="0.01"/>
+  <xacro:property name="wheel_y" value="${cube_size / 2 + 0.004 + wheel_width / 2}"/>
+  <xacro:property name="wheel_mu" value="0.9"/>
+  <xacro:property name="gyro_noise" value="0.001"/>      <!-- rad/s, about MPU-6050 at 100 Hz -->
+  <xacro:property name="accel_noise" value="0.04"/>      <!-- m/s^2 -->
+
+  <link name="base_link">
+    <inertial>
+      <origin xyz="0 0 ${core_com_z}"/>
+      <mass value="${core_mass}"/>
+      <inertia ixx="${core_mass * cube_size**2 / 6}" iyy="${core_mass * cube_size**2 / 6}"
+               izz="${core_mass * cube_size**2 / 6}" ixy="0" ixz="0" iyz="0"/>
+    </inertial>
+    <visual>
+      <origin xyz="0 0 ${cube_z}"/>
+      <geometry><box size="${cube_size} ${cube_size} ${cube_size}"/></geometry>
+      <material name="orange"><color rgba="0.95 0.45 0.1 1"/></material>
+    </visual>
+    <collision>
+      <origin xyz="0 0 ${cube_z}"/>
+      <geometry><box size="${cube_size} ${cube_size} ${cube_size}"/></geometry>
+    </collision>
+    <!-- casters: bottoms level with the wheels' contact points -->
+    <xacro:macro name="caster" params="x">
+      <visual>
+        <origin xyz="${x} 0 ${caster_radius - wheel_radius}"/>
+        <geometry><sphere radius="${caster_radius}"/></geometry>
+        <material name="grey"/>
+      </visual>
+      <collision>
+        <origin xyz="${x} 0 ${caster_radius - wheel_radius}"/>
+        <geometry><sphere radius="${caster_radius}"/></geometry>
+      </collision>
+    </xacro:macro>
+    <xacro:caster x="${caster_x}"/>
+    <xacro:caster x="${-caster_x}"/>
+  </link>
+  <!-- frictionless casters (applies to the whole cube; only the casters touch the ground) -->
+  <gazebo reference="base_link">
+    <mu1>0.0</mu1>
+    <mu2>0.0</mu2>
+  </gazebo>
+
+  <!-- side: +1 left, -1 right. The right prismatic axis is reversed so a positive
+       /shell/cmd opens both shells. -->
+  <xacro:macro name="shell" params="name side">
+    <joint name="${name}_shell_joint" type="prismatic">
+      <parent link="base_link"/>
+      <child link="${name}_slider"/>
+      <origin xyz="0 ${side * wheel_y} 0"/>
+      <axis xyz="0 ${side} 0"/>
+      <limit lower="0" upper="${shell_extension_max}" effort="5" velocity="0.05"/>
+    </joint>
+    <link name="${name}_slider">
+      <inertial>
+        <mass value="${slider_mass}"/>
+        <inertia ixx="1e-5" iyy="1e-5" izz="1e-5" ixy="0" ixz="0" iyz="0"/>
+      </inertial>
+    </link>
+    <joint name="${name}_wheel_joint" type="continuous">
+      <parent link="${name}_slider"/>
+      <child link="${name}_shell"/>
+      <axis xyz="0 1 0"/>
+    </joint>
+    <link name="${name}_shell">
+      <inertial>
+        <mass value="${wheel_mass}"/>
+        <inertia ixx="${wheel_mass * (3 * wheel_radius**2 + wheel_width**2) / 12}"
+                 iyy="${wheel_mass * wheel_radius**2 / 2}"
+                 izz="${wheel_mass * (3 * wheel_radius**2 + wheel_width**2) / 12}"
+                 ixy="0" ixz="0" iyz="0"/>
+      </inertial>
+      <visual>
+        <origin rpy="${pi / 2} 0 0"/>
+        <geometry><cylinder radius="${wheel_radius}" length="${wheel_width}"/></geometry>
+        <material name="grey"><color rgba="0.3 0.3 0.3 1"/></material>
+      </visual>
+      <!-- a spoke so the wheel's rotation is visible -->
+      <visual>
+        <origin xyz="0 ${side * wheel_width / 2} 0"/>
+        <geometry><box size="${wheel_radius * 1.6} 0.002 0.01"/></geometry>
+        <material name="white"><color rgba="0.9 0.9 0.9 1"/></material>
+      </visual>
+      <collision>
+        <origin rpy="${pi / 2} 0 0"/>
+        <geometry><cylinder radius="${wheel_radius}" length="${wheel_width}"/></geometry>
+      </collision>
+    </link>
+    <gazebo reference="${name}_shell">
+      <mu1>${wheel_mu}</mu1>
+      <mu2>${wheel_mu}</mu2>
+    </gazebo>
+  </xacro:macro>
+  <xacro:shell name="left" side="1"/>
+  <xacro:shell name="right" side="-1"/>
+
+  <joint name="thermal_joint" type="fixed">
+    <parent link="base_link"/>
+    <child link="thermal_link"/>
+    <origin xyz="${cube_size / 2 + 0.001} 0 -0.005"/>
+  </joint>
+  <link name="thermal_link">
+    <visual>
+      <geometry><box size="0.004 0.012 0.012"/></geometry>
+      <material name="black"><color rgba="0.05 0.05 0.05 1"/></material>
+    </visual>
+  </link>
+
+  <joint name="imu_joint" type="fixed">
+    <parent link="base_link"/>
+    <child link="imu_link"/>
+    <origin xyz="0 0 -0.01"/>
+  </joint>
+  <link name="imu_link"/>
+
+  <gazebo>
+    <plugin filename="gz-sim-diff-drive-system" name="gz::sim::systems::DiffDrive">
+      <left_joint>left_wheel_joint</left_joint>
+      <right_joint>right_wheel_joint</right_joint>
+      <wheel_separation>${2 * wheel_y}</wheel_separation>
+      <wheel_radius>${wheel_radius}</wheel_radius>
+      <max_linear_velocity>0.3</max_linear_velocity>
+      <max_linear_acceleration>0.5</max_linear_acceleration>
+      <max_angular_velocity>1.5</max_angular_velocity>
+      <max_angular_acceleration>3.0</max_angular_acceleration>
+      <topic>/cmd_vel</topic>
+      <odom_topic>/odom</odom_topic>
+      <odom_publish_frequency>30</odom_publish_frequency>
+      <frame_id>odom</frame_id>
+      <child_frame_id>base_link</child_frame_id>
+      <!-- not bridged: only the EKF publishes odom -> base_link -->
+      <tf_topic>/model/sphere_scout/tf</tf_topic>
+    </plugin>
+    <!-- one controller per shell on the same topic: one command moves both, like the single
+         servo. Velocity mode so sideways wheel friction can't stall the stand-in. -->
+    <xacro:macro name="shell_controller" params="name">
+      <plugin filename="gz-sim-joint-position-controller-system"
+              name="gz::sim::systems::JointPositionController">
+        <joint_name>${name}_shell_joint</joint_name>
+        <topic>/shell_cmd</topic>
+        <use_velocity_commands>true</use_velocity_commands>
+        <p_gain>5</p_gain>
+        <cmd_max>0.05</cmd_max>
+        <cmd_min>-0.05</cmd_min>
+      </plugin>
+    </xacro:macro>
+    <xacro:shell_controller name="left"/>
+    <xacro:shell_controller name="right"/>
+    <plugin filename="gz-sim-joint-state-publisher-system"
+            name="gz::sim::systems::JointStatePublisher">
+      <topic>/joint_states</topic>
+      <update_rate>50</update_rate>
+    </plugin>
+  </gazebo>
+
+  <gazebo reference="thermal_link">
+    <sensor name="thermal_camera" type="thermal">
+      <gz_frame_id>thermal_link</gz_frame_id>
+      <topic>/thermal/image_raw</topic>
+      <update_rate>8</update_rate>
+      <always_on>true</always_on>
+      <camera>
+        <horizontal_fov>0.96</horizontal_fov>  <!-- 55 deg, MLX90640 -->
+        <image><width>32</width><height>24</height><format>L16</format></image>
+        <clip><near>0.05</near><far>20</far></clip>
+      </camera>
+      <plugin filename="gz-sim-thermal-sensor-system" name="gz::sim::systems::ThermalSensor">
+        <resolution>0.01</resolution>  <!-- kelvin per pixel count -->
+      </plugin>
+    </sensor>
+  </gazebo>
+
+  <xacro:macro name="noise_xyz" params="stddev">
+    <x><noise type="gaussian"><mean>0</mean><stddev>${stddev}</stddev></noise></x>
+    <y><noise type="gaussian"><mean>0</mean><stddev>${stddev}</stddev></noise></y>
+    <z><noise type="gaussian"><mean>0</mean><stddev>${stddev}</stddev></noise></z>
+  </xacro:macro>
+  <gazebo reference="imu_link">
+    <sensor name="imu" type="imu">
+      <gz_frame_id>imu_link</gz_frame_id>
+      <topic>/imu/data</topic>
+      <update_rate>100</update_rate>
+      <always_on>true</always_on>
+      <imu>
+        <angular_velocity><xacro:noise_xyz stddev="${gyro_noise}"/></angular_velocity>
+        <linear_acceleration><xacro:noise_xyz stddev="${accel_noise}"/></linear_acceleration>
+      </imu>
+    </sensor>
+  </gazebo>
+</robot>

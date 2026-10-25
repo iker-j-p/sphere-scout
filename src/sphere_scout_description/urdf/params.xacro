@@ -1,18 +1,84 @@
 <?xml version="1.0"?>
 <!--
-  params.xacro: the ONE place for every robot dimension and mass.
-  Owner: TODO(kickoff)
+  params.xacro: every robot dimension and mass, in metres and kilograms.
 
-  TODO(kickoff): define an <xacro:property> for each value below. Values are decided at kickoff;
-  do not invent them. Any placeholder must stay marked TODO(kickoff) and be listed in the README.
-    - shell_radius          (m)
-    - rolling_gap           (m)   distance between the shell rim planes when rolling
-    - shell_extension_max   (m)   travel of each prismatic shell joint
-    - core_mass             (kg)
-    - shell_mass            (kg)  per shell
-    - core_com_offset_z     (m)   core CoM distance BELOW the axle
-    - thermal mount pose    (xyz rpy relative to base_link)
-    - imu mount pose        (xyz rpy relative to base_link)
+  Sources:
+    CAD    meshes/*.stl (SolidWorks export of the team's design, millimetres)
+    calc   the team's mass calculator: 121 g total, 74 g core, 23.5 g per shell, core parts
+           N20 x2 15 g, GS-1502 x2 1.8 g, MLX90640 board 6 g, MPU-6050 3 g, ESP32-S3 Mini 3 g,
+           DRV8833 2 g, 5 V boost 0.7 g, TP4056 2 g, LiPo 10.5 g, frame/posts/wiring 13 g
+    team   told directly (shells 2 cm either side of the middle; ballast at the bottom; rubber
+           grips with small steps on the shells)
+    assumed  not given yet; change here
+
+  Frames: base_link is the axle centre on the robot's middle plane. x forward (camera), y left
+  (axle), z up. The core's parts were placed on the CAD pieces they match; with them the whole
+  robot without ballast comes to 121 g with its CoM 6.6 mm below the axle, as the calculator says.
 -->
 <robot xmlns:xacro="http://www.ros.org/wiki/xacro">
+
+  <!-- shells (CAD: 45 mm radius hemispheres, 1.5 mm wall, axle hub at the pole) -->
+  <xacro:property name="shell_radius" value="0.045"/>
+  <xacro:property name="shell_mass" value="0.0235"/>              <!-- calc -->
+  <!-- distance between the two rim planes while rolling: 2 cm either side of the middle (team).
+       DiffDrive's wheel_separation, since each shell touches the ground at its rim plane. -->
+  <xacro:property name="rolling_gap" value="0.04"/>
+  <!-- travel of each prismatic shell joint (assumed: GS-1502 stroke not given) -->
+  <xacro:property name="shell_extension_max" value="0.01"/>
+  <!-- rubber grips (team); the grips' small steps are not modelled as geometry -->
+  <xacro:property name="shell_mu" value="1.0"/>
+  <xacro:property name="slider_mass" value="0.002"/>             <!-- assumed: servo rod + bearing -->
+
+  <!-- core without ballast (calc masses on CAD positions): 73.8 g, CoM 10.8 mm below the axle -->
+  <xacro:property name="core_mass" value="0.0738"/>
+  <xacro:property name="core_com_x" value="0.0008"/>
+  <xacro:property name="core_com_y" value="-0.0008"/>
+  <xacro:property name="core_com_offset_z" value="0.0108"/>      <!-- below the axle -->
+  <xacro:property name="core_ixx" value="4.135e-05"/>
+  <xacro:property name="core_iyy" value="1.934e-05"/>
+  <xacro:property name="core_izz" value="3.825e-05"/>
+  <xacro:property name="core_ixz" value="-2.65e-06"/>
+  <!-- core mesh: CAD axle line is at x 33.5, z 0 mm and the middle plane at y 39.2 mm -->
+  <xacro:property name="core_mesh_offset" value="-0.0335 -0.0392 0"/>
+  <!-- lowest core parts (LiPo + ballast) as one box, so the belly can catch on rubble -->
+  <xacro:property name="belly_xyz" value="-0.003 0 -0.0348"/>
+  <xacro:property name="belly_size" value="0.029 0.036 0.0088"/>
+  <xacro:property name="belly_mu" value="0.3"/>
+
+  <!-- ballast under the LiPo (team: weight at the bottom; mass assumed): 20 g lead,
+       20 x 20 x 4 mm. Whole robot then 141 g with its CoM 10.9 mm below the axle. -->
+  <xacro:property name="ballast_mass" value="0.020"/>
+  <xacro:property name="ballast_xyz" value="-0.003 0 -0.0372"/>
+  <xacro:property name="ballast_size" value="0.020 0.020 0.004"/>
+
+  <!-- sensors (CAD): MLX90640 can front at 30.5 mm ahead of the axle, landscape (55 deg across
+       the gap, team); MPU-6050 board -->
+  <xacro:property name="thermal_xyz" value="0.0305 0 0"/>
+  <xacro:property name="thermal_rpy" value="0 0 0"/>
+  <!-- RGB camera (team: OV2640 on an ESP32-S3, for example XIAO ESP32S3 Sense; pose, lens and
+       rate assumed): just above the MLX90640 in the shell gap, looking forward -->
+  <xacro:property name="rgb_xyz" value="0.0295 0 0.011"/>
+  <xacro:property name="rgb_rpy" value="0 0 0"/>
+  <xacro:property name="rgb_hfov" value="1.152"/>                <!-- 66 deg -->
+  <xacro:property name="rgb_width" value="320"/>
+  <xacro:property name="rgb_height" value="240"/>
+  <xacro:property name="rgb_rate" value="15"/>
+  <!-- white LED headlight for the RGB camera at night (assumed: about a 1 W LED with a 50 deg
+       beam), just under the camera -->
+  <xacro:property name="headlight_xyz" value="0.031 0 0.004"/>
+  <xacro:property name="headlight_range" value="8"/>
+  <xacro:property name="headlight_inner" value="0.5"/>          <!-- rad, full-brightness cone -->
+  <xacro:property name="headlight_outer" value="0.9"/>          <!-- rad, edge of the beam -->
+
+  <xacro:property name="imu_xyz" value="0 -0.025 -0.0195"/>
+  <xacro:property name="imu_rpy" value="0 0 0"/>
+  <xacro:property name="gyro_noise" value="0.001"/>              <!-- rad/s, assumed (MPU-6050 at 100 Hz) -->
+  <xacro:property name="accel_noise" value="0.04"/>              <!-- m/s^2, assumed -->
+
+  <!-- drive limits (assumed; the N20s could do about 1.4 m/s unloaded). max_accel is high so
+       motor_state_machine's swing damping isn't clipped; it ramps teleop at 0.5 m/s^2 itself. -->
+  <xacro:property name="max_speed" value="0.3"/>
+  <xacro:property name="max_accel" value="3.0"/>
+  <xacro:property name="max_turn_rate" value="1.5"/>
+  <xacro:property name="max_turn_accel" value="3.0"/>
 </robot>

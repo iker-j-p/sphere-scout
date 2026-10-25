@@ -12,6 +12,7 @@ setup(
         ('share/ament_index/resource_index/packages', ['resource/' + package_name]),
         ('share/' + package_name, ['package.xml']),
         ('share/' + package_name + '/launch', glob('launch/*.launch.py')),
+        ('share/' + package_name + '/config', glob('config/*.yaml')),
     ],
     install_requires=['setuptools'],
     zip_safe=True,
@@ -21,8 +22,11 @@ setup(
     license='MIT',
     entry_points={
         'console_scripts': [
+            'thermal_celsius_node = sphere_scout_ai.thermal_celsius_node:main',
+            'print_thermal = sphere_scout_ai.print_thermal:main',
             'thermal_detector_node = sphere_scout_ai.thermal_detector_node:main',
             'target_localizer_node = sphere_scout_ai.target_localizer_node:main',
+            'thermal_viewer_node = sphere_scout_ai.thermal_viewer_node:main',
         ],
     },
 )

@@ -24,7 +24,7 @@ Sphere-Scout is a spherical search-and-rescue robot whose two hemispherical shel
 
 ## Layout
 
-The repo root is the colcon workspace: `src/` holds the five ROS packages, `firmware/sphere_scout_firmware` is PlatformIO (`COLCON_IGNORE`d). Build with `colcon build --symlink-install`.
+The repo root is the colcon workspace: `src/` holds the five ROS packages, `firmware/sphere_scout_firmware` is PlatformIO (`COLCON_IGNORE`d). Build with `colcon build --symlink-install`. `tools/xr_viewer` (`COLCON_IGNORE`d) is an external, read-only 3D operator view: `bridge.py` (rclpy + stdlib) forwards `/survivor/markers`, `/thermal/view` (as JPEG, only while a browser is connected) and the `odom → base_link` TF to a browser app (vendored three.js) with a movable thermal-feed window. It adds no topic, type or frame.
 
 ## Topics
 
@@ -37,14 +37,24 @@ The repo root is the colcon workspace: `src/` holds the five ROS packages, `firm
 | `/shell/cmd` | std_msgs/msg/Float64 | motor_state_machine | Gazebo JointPositionController (bridge, gz `/shell_cmd`) / firmware |
 | `/joint_states` | sensor_msgs/msg/JointState | Gazebo JointStatePublisher (bridge) | robot_state_publisher, motor_state_machine |
 | `/odom` | nav_msgs/msg/Odometry | Gazebo DiffDrive (bridge) | ekf_node |
-| `/imu/data` | sensor_msgs/msg/Imu | Gazebo IMU (bridge) / firmware | ekf_node |
+| `/imu/data` | sensor_msgs/msg/Imu | Gazebo IMU (bridge) / firmware | ekf_node, motor_state_machine (swing damping) |
 | `/odometry/filtered` | nav_msgs/msg/Odometry | ekf_node (also TF odom → base_link) | RViz |
-| `/thermal/image_raw` | sensor_msgs/msg/Image (16-bit, K × 100) | Gazebo thermal camera (bridge) / firmware | thermal_detector_node, RViz |
-| `/detected_target` | vision_msgs/msg/Detection2DArray | thermal_detector_node | target_localizer_node |
+| `/thermal/image_raw` | sensor_msgs/msg/Image (16-bit, K × 100) | Gazebo thermal camera (bridge) / firmware | thermal_celsius_node, thermal_detector_node, thermal_viewer_node |
+| `/thermal/celsius` | sensor_msgs/msg/Image (32FC1, °C per pixel, 32 × 24) | thermal_celsius_node | human detection, print_thermal |
+| `/thermal/image_color` | sensor_msgs/msg/Image (rgb8, fixed 5–40 °C colour scale, 320 × 268) | thermal_celsius_node | Gazebo thermal panel (bridge, ROS → Gazebo), RViz |
+| `/camera/image_raw` | sensor_msgs/msg/Image (rgb8, 320 × 240, OV2640) | Gazebo RGB camera (bridge) | camera_jpeg republisher, RViz |
+| `/camera/image_raw/compressed` | sensor_msgs/msg/CompressedImage (JPEG, quality 80, ~7 kB) | camera_jpeg (sim) / firmware (OV2640 JPEG) | XR headset |
+| `/detected_target` | vision_msgs/msg/Detection2DArray | thermal_detector_node | target_localizer_node, thermal_viewer_node |
 | `/survivor/position` | geometry_msgs/msg/PointStamped (frame `odom`) | target_localizer_node | — |
 | `/survivor/markers` | visualization_msgs/msg/MarkerArray | target_localizer_node | RViz |
+| `/thermal/view` | sensor_msgs/msg/Image (rgb8, reliable, depth 1) | thermal_viewer_node | RViz |
 | `/mission/state` | std_msgs/msg/String | motor_state_machine | — |
 | `/mission/scan` | std_srvs/srv/Trigger (service) | motor_state_machine (server) | operator |
+| `/target_localizer_node/reset` | std_srvs/srv/Trigger (service) | target_localizer_node (server) | operator |
+
+`/thermal/view` (rgb8 render for the driver) and the `~/reset` service are new. `target_localizer_node` is a continuous passive estimator: it does not subscribe to `/mission/state`, `/cmd_vel` or `/odom`, and `/survivor/position` carries triangulated points only. Its parameters are in `src/sphere_scout_bringup/config/target_localizer.yaml` (replacing the stub's `width`, `height`, `min_ray_angle_deg`, `ground_truth_file`); the viewer's are in `thermal_viewer.yaml`. `pixel_convention` must be the same in the detector, localizer and viewer. `target_height_m` and `target_height_sigma_m` stay unset until Mech 2 provides them. `spawn_pose` and `ground_truth_world` are set to the `gazebo_world.launch.py` spawn (5.0, -2.5, 0.06, yaw 0) and Rescue Randy's head from `sphere_scout_gazebo/config/ground_truth.yaml`; keep them equal to those files.
+
+`thermal_detector_node` asks an external human-detection model, a separate HTTP service (not a ROS node, not part of this repo): <https://github.com/andrew2719/thermal_rescue_ai_model>, cloned to `external/thermal_rescue_ai_model` with its own venv (`external/` is git-ignored). Start it with `tools/run_model_server.sh` (port 8766; the model's own default 8765 is also the browser bridge's). The node posts each `/thermal/image_raw` frame in °C to `POST /predict` and publishes `/detected_target` with the image header, one `Detection2D` per box (`results[0].hypothesis` = `human`, score), an empty array for "no human", and nothing when the service did not answer. The model's boxes are pixel boundaries (right/bottom exclusive); the node converts them to `pixel_convention`. Parameters are in `src/sphere_scout_ai/config/thermal_detector.yaml`: `server_url`, `request_timeout_s`, `pixel_convention`, `resolution`. The service has no authentication: keep it on `127.0.0.1`.
 
 Gazebo-side topic names differ only for `/shell/cmd` (gz `/shell_cmd`). The thermal image encoding is 16-bit kelvin × 100 (`temp_c = pixel * 0.01 - 273.15`) in both sim and firmware.
 
@@ -54,9 +64,9 @@ Gazebo-side topic names differ only for `/shell/cmd` (gz `/shell_cmd`). The ther
 |---|---|---|
 | `sphere_scout_description` | URDF/xacro, `params.xacro`, meshes, RViz config | TODO(kickoff) |
 | `sphere_scout_gazebo` | `apartment.sdf` world, `apartment` model (built from `Building/` with `tools/export_apartment.py`), ground truth | TODO(kickoff) |
-| `sphere_scout_bringup` | `gazebo_world.launch.py`, bridge and EKF config | TODO(kickoff) |
+| `sphere_scout_bringup` | `gazebo_world.launch.py`, `operator.launch.py` (localizer + viewer + RViz), bridge, EKF, localizer and viewer config | TODO(kickoff) |
 | `sphere_scout_control` | `motor_state_machine` | TODO(kickoff) |
-| `sphere_scout_ai` | `thermal_detector_node`, `target_localizer_node`, `perception.launch.py` | TODO(kickoff) |
+| `sphere_scout_ai` | `thermal_detector_node`, `target_localizer_node`, `thermal_viewer_node`, `perception.launch.py` | TODO(kickoff) |
 | `firmware/sphere_scout_firmware` | ESP32-S3 micro-ROS firmware (PlatformIO) | TODO(kickoff) |
 
 ## Interface changes

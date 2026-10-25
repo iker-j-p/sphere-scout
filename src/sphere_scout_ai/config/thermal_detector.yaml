@@ -1,0 +1,13 @@
+# Parameters for thermal_detector_node. The model runs in its own process (see the node docstring).
+thermal_detector_node:
+  ros__parameters:
+    use_sim_time: true
+    # Where the model's HTTP service listens. The model repo's default is 8765, which is also
+    # tools/xr_viewer/bridge.py's default, so this repo starts the model on 8766:
+    #   python -m sphere_scout serve --port 8766
+    server_url: http://127.0.0.1:8766
+    request_timeout_s: 0.5
+    # Must equal pixel_convention in target_localizer.yaml and thermal_viewer.yaml. The model
+    # reports pixel boundaries (right/bottom exclusive); the node converts to this convention.
+    pixel_convention: index
+    resolution: 0.01              # kelvin per raw count, as in the ThermalSensor plugin
